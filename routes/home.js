@@ -11,5 +11,4 @@ router.post("/get_song", homeController.get_song);
 router.post("/category", appController.getSongsByCategory);
 router.post("/categoryPaylist", auth, appController.getSongsByCategoryPaylist);
 
-
 module.exports = router;

@@ -61,7 +61,7 @@ module.exports = {
       `select A.*, B.artist_name, C.genre_type, D.album_type, 
               E.layout_name, 
               F.drums, F.bass, F.guitar, F.vocals, F.solo, F.click_bpm, F.chords_songs, F.keyboards, F.claps ,
-              F.back_track 
+              F.backing_track_guitar, F.backing_track_bass, F.backing_track_drums, F.backing_track_keys
               from tbl_songs A
               LEFT JOIN tbl_artists B  ON A.artist= B.id
               LEFT JOIN tbl_genre C ON A.genre= C.id
@@ -92,8 +92,6 @@ module.exports = {
       [user_id, song_id]
     );
   },
-
-
 
   //   fetchSongsById: async (id) => {
   //   return db.query(

@@ -26,6 +26,7 @@ const {
   insertIntoNotification,
   get_notification,
   update_fcm_token,
+  fetchPaymentByUserId
 } = require("../models/users");
 
 const Joi = require("joi");
@@ -211,6 +212,8 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password, fcm_token } = req.body;
+
+    // Validation
     const schema = Joi.alternatives(
       Joi.object({
         email: Joi.string()
@@ -228,6 +231,7 @@ exports.login = async (req, res) => {
         fcm_token: Joi.string().empty(),
       })
     );
+
     const result = schema.validate(req.body);
 
     if (result.error) {
@@ -239,91 +243,77 @@ exports.login = async (req, res) => {
         status: 400,
         success: false,
       });
-    } else {
-      const result = await fetchUserByEmail(email);
-      if (result.length !== 0) {
-        const match = bcrypt.compareSync(password, result[0].password);
-        if (match) {
-          if (result[0].act_token != "") {
-            console.log(result[0].act_token, result[0].act_token);
-            return res.json({
-              message: "Please verify your account first",
-              success: false,
-              status: 400,
-              token: "",
-              userinfo: [],
-            });
-          }
-          await updateLoginStatusByEmail(email);
-          const token = jwt.sign(
-            {
-              data: {
-                id: result[0].id,
-              },
-            },
-            "SecretKey"
-          );
-
-          let fcmToken = await update_fcm_token(fcm_token, email);
-
-          //fetch user details
-          if (
-            result[0]["image"] === "" ||
-            !result[0]["image"] ||
-            result[0]["image"] === null
-          ) {
-            // if(result[0]['image'] != "" || !result[0]['image'] || result[0]['image']!=null )
-            profileImage = "";
-          } else {
-            profileImage =
-              "https://159.223.251.167:3000/uploads/" + result[0]["image"];
-            // "https://159.223.251.167:3000/uploads/" + result[0]["image"];
-          }
-
-          result[0]["image"] = profileImage;
-          let instrumentselected = "";
-
-          const instrument = await fetchInstrumentUserid(result[0]["id"]);
-          if (instrument.length > 0) {
-            instrumentselected = instrument[0]["instrument_selected"];
-          } else {
-            instrumentselected = "";
-          }
-
-          result[0]["instrument_selected"] = instrumentselected;
-
-          // let userdetail = {
-          //   id: result[0]["id"],
-          //   firstname: result[0]["firstname"],
-          //   lastname: result[0]["lastname"],
-          //   email: result[0]["email"],
-          //   phone: result[0]["phone"],
-          //   payment_status :result[0]["payment_status"],
-          //   image: profileImage,
-          // };
-
-          return res.json({
-            success: true,
-            message: "Successfully Login",
-            status: 200,
-            token: token,
-            userinfo: result[0],
-          });
-        } else {
-          return res.json({
-            message: "wrong password",
-            success: false,
-            status: 400,
-          });
-        }
-      } else {
-        return res.json({
-          message: "User not found",
-          status: 400,
-          success: false,
-        });
-      }
     }
+
+    // Fetch user
+    const userResult = await fetchUserByEmail(email);
+
+    if (userResult.length === 0) {
+      return res.json({
+        message: "User not found",
+        status: 400,
+        success: false,
+      });
+    }
+
+    const user = userResult[0];
+
+    // Check password
+    const match = bcrypt.compareSync(password, user.password);
+    if (!match) {
+      return res.json({
+        message: "Wrong password",
+        success: false,
+        status: 400,
+      });
+    }
+
+    // Check account verification
+    if (user.act_token !== "") {
+      return res.json({
+        message: "Please verify your account first",
+        success: false,
+        status: 400,
+        token: "",
+        userinfo: [],
+      });
+    }
+
+    // Update login status
+    await updateLoginStatusByEmail(email);
+
+    // JWT token
+    const token = jwt.sign(
+      { data: { id: user.id } },
+      "SecretKey"
+    );
+
+    // Update FCM token
+    await update_fcm_token(fcm_token, email);
+
+    // Profile image
+    let profileImage = "";
+    if (user.image && user.image !== "") {
+      profileImage = "https://159.223.251.167:3000/uploads/" + user.image;
+    }
+    user.image = profileImage;
+
+    // Fetch selected instrument
+    const instrument = await fetchInstrumentUserid(user.id);
+    user.instrument_selected = instrument.length > 0 ? instrument[0].instrument_selected : "";
+
+    // **Fetch payment status**
+    const paymentData = await fetchPaymentByUserId(user.id); // you need to implement this function
+    console.log('paymentData', paymentData);
+    user.payment_done = paymentData && paymentData.payment_status === 1 ? true : false;
+
+    return res.json({
+      success: true,
+      message: "Successfully Login",
+      status: 200,
+      token: token,
+      userinfo: user,
+    });
   } catch (error) {
     console.log(error, "<==error");
     return res.json({
@@ -333,6 +323,8 @@ exports.login = async (req, res) => {
     });
   }
 };
+
+
 
 exports.verifyUser = async (req, res) => {
   try {
@@ -484,19 +476,59 @@ exports.forgetPassword = async (req, res) => {
         let mailOptions = {
           from: "karaokeapp23@gmail.com",
           to: email,
-          subject: "forgot Password",
-          html: `<table width="100%" border=false cellspacing=false cellpadding=false>
-                        <tr>
-                           <td class="bodycopy" style="text-align:left;">
-                              <center>
-                                 <div align="center"></div>
-                                 <p></p>
-                                 <h2 style="text-align: center;margin-top:15px;"><strong>Please click below link to change password </strong></h2>
-                                 <p style="color:#333"> Please <a href="https://159.223.251.167:3000/verifyPassword/${token}">click here</a></p>
-                              </center>
-                           </td>
-                        </tr>
-                     </table>`,
+          subject: "Forgot Password",
+          html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;">
+  <tr>
+    <td align="center">
+ 
+      <!-- Email Container -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:600px;background:#333;border-radius:8px;
+                    box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+ 
+        <!-- Header -->
+        <tr>
+          <td align="center" style="padding:50px 20px 10px;">
+ 
+            <img src="https://159.223.251.167:3000/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
+            <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                       font-size:20px;color:#fff;">
+              Reset Your Password
+            </h1>
+          </td>
+        </tr>
+ 
+        <!-- Subtext -->
+        <tr>
+          <td align="center" style="padding:0 30px 20px;">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                      font-size:15px;color:#fff;line-height:1.6;">
+             Please click below link to change password
+            </p>
+          </td>
+        </tr>
+ 
+        <!-- Button -->
+        <tr>
+          <td align="center" style="padding:20px 20px 50px;">
+            <a href="https://159.223.251.167:3000/verifyPassword/${token}"
+               style="display:inline-block;
+                      padding:14px 28px;
+                      background:#0D8EC5;
+                      color:#ffffff;
+                      text-decoration:none;
+                      font-family:Arial,Helvetica,sans-serif;
+                      font-size:16px;
+                      font-weight:bold;
+                      border-radius:6px;">
+              Change Password
+            </a>
+          </td>
+        </tr>
+ 
+ 
+       
+      </table>`,
         };
         transporter.sendMail(mailOptions, async function (error, info) {
           console.log("error", error);

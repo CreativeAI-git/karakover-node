@@ -1,58 +1,44 @@
-const mysql = require('mysql2');
-const util = require('util');
-var db_config = {
-  host: '159.223.251.167',
-  user: 'karakover_user',
-  password: 'Password@2026',
-  port: 3306,
-  database: 'karakover-admin'
+const mysql = require("mysql2");
+const util = require("util");
+
+const db_config = {
+  host: "localhost",
+  user: "root",
+  password: "BE&8mA@95Onp",
+  port: "3306",
+  database: "karakover-admin",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
 };
-// var db_config = {
-//     host: 'localhost',
-//     user: 'root',
-//     password: 'BE&8mA@95Onp',
-//     port:'3306',
-//     database: 'karakover-admin'
-// };
 
-var connection;
+// ? CREATE POOL (instead of createConnection)
+const pool = mysql.createPool(db_config);
 
-function handleDisconnect() {
-  connection = mysql.createConnection(db_config);
+// optional logs
+pool.on("connection", () => {
+  console.log("MySQL Pool Connected");
+});
 
-  connection.connect(function (err) {
-    if (err) {
-      console.log('error when connecting to db:', err);
-      setTimeout(handleDisconnect, 2000);
-    } else {
-      console.log("Connected to mysql Server!");
-    }
-  });
+pool.on("error", (err) => {
+  console.error("MySQL Pool Error:", err);
+});
 
-  connection.on('error', function (err) {
-    console.log('Cannot be connect to Database due to', err);
-    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-      handleDisconnect();
-    } else {
-      throw err;
-    }
-  });
-}
-
-handleDisconnect();
-
+// ? SAME INTERFACE AS BEFORE
 function makeDb() {
   return {
     query(sql, args) {
       console.log("db connected localhost");
       console.log(sql);
-      return util.promisify(connection.query).call(connection, sql, args);
+      return util.promisify(pool.query).call(pool, sql, args);
     },
     close() {
-      console.log("db not connected to localhost");
-      return util.promisify(connection.end).call(connection);
-    }
-  }
+      console.log("db pool closed");
+      return util.promisify(pool.end).call(pool);
+    },
+  };
 }
 
 const db = makeDb();

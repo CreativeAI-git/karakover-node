@@ -24,7 +24,7 @@ module.exports = {
   //       tbl_music_files.drums,
   //       tbl_music_files.keyboards,
   //       tbl_music_files.claps,
-  //       tbl_music_files.master_song AS master1
+  //       tbl_music_files.vocals AS master1
   //     FROM tbl_songs
   //     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
   //     WHERE tbl_songs.instrument_id = '1'
@@ -39,7 +39,7 @@ module.exports = {
       tbl_music_files.solo, tbl_music_files.click_bpm,
       tbl_music_files.guitar, tbl_music_files.bass,
       tbl_music_files.drums, tbl_music_files.keyboards,
-      tbl_music_files.claps, tbl_music_files.vocals, tbl_music_files.master_song AS master1
+      tbl_music_files.claps, tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE 1=1
@@ -86,8 +86,7 @@ module.exports = {
       mf.drums,
       mf.keyboards,
       mf.claps,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
@@ -118,7 +117,7 @@ module.exports = {
            tbl_music_files.solo, tbl_music_files.click_bpm,
            tbl_music_files.guitar, tbl_music_files.bass,
            tbl_music_files.drums, tbl_music_files.keyboards,
-           tbl_music_files.claps, tbl_music_files.vocals, tbl_music_files.master_song AS master1
+           tbl_music_files.claps, tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE genre = 'Folk'  -- optional: can remove if genre_id used
@@ -159,8 +158,7 @@ module.exports = {
       tbl_music_files.drums,
       tbl_music_files.keyboards,
       tbl_music_files.claps,
-      tbl_music_files.vocals,
-      tbl_music_files.master_song AS master1
+      tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE 1=1
@@ -201,8 +199,7 @@ module.exports = {
       tbl_music_files.drums,
       tbl_music_files.keyboards,
       tbl_music_files.claps,
-      tbl_music_files.vocals,
-      tbl_music_files.master_song AS master1
+      tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE 1=1
@@ -243,8 +240,7 @@ getAllSongsByInstrument: async (instrumentId) => {
       s.*,                      -- song table ka id safe rahega
       mf.song_id,
       mf.chords_songs,
-      mf.vocals,
-      mf.master_song AS master1,
+      mf.vocals AS master1,
       mf.solo,
       mf.click_bpm,
       mf.bass,
@@ -302,8 +298,7 @@ getyourMoods: async (instrumentId, search = "") => {
       s.*,                      
       mf.song_id,
       mf.chords_songs,
-      mf.vocals,
-      mf.master_song AS master1,
+      mf.vocals AS master1,
       mf.solo,
       mf.click_bpm,
       mf.bass,
@@ -420,7 +415,7 @@ getyourMoods: async (instrumentId, search = "") => {
 //   const query = `
 //     SELECT 
 //       s.id, s.artist, s.category, s.instrument_id, s.track, s.label, s.cover_image, s.lyrics,
-//       mf.solo, mf.click_bpm, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.master_song AS master1
+//       mf.solo, mf.click_bpm, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.vocals AS master1
 //     FROM tbl_songs s
 //     JOIN tbl_music_files mf ON mf.song_id = s.id
 //     WHERE s.genre = ? AND s.instrument_id = ?
@@ -459,8 +454,7 @@ getSongsByGenreAndInstrument: async (genre_id, instrument_id) => {
       mf.drums,
       mf.keyboards,
       mf.claps,
-      mf.master_song AS master1,
-      mf.vocals
+      mf.vocals AS master1
     FROM tbl_songs s
     LEFT JOIN tbl_music_files mf ON mf.song_id = s.id
     ${whereClause}
@@ -473,7 +467,7 @@ getSongs_All: async () => {
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     ORDER BY s.id DESC
@@ -486,7 +480,7 @@ getSongs_All_By_Instrument: async (instrument_id) => {
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.instrument_id = ?
@@ -499,7 +493,7 @@ getSongs_By_Genre: async (genre_id) => {
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
@@ -515,7 +509,7 @@ getSongs_By_Genre_And_Instrument: async (genre_id, instrument_id) => {
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
@@ -590,8 +584,7 @@ getSongs_By_InstrumentOnly: async (instrument_id) => {
       mf.bass,
       mf.keyboards,
       mf.claps,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.instrument_id = CAST(? AS UNSIGNED)
@@ -610,8 +603,7 @@ getSongsByGenreIdAndInstrument: async (genre_id) => {
       mf.guitar,
       mf.bass,
       mf.keyboards,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
@@ -630,8 +622,7 @@ getSongsByAllGenres: async () => {
       mf.drums,
       mf.keyboards,
       mf.claps,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     ORDER BY s.id DESC
@@ -642,7 +633,7 @@ getSongsByAllGenres: async () => {
 user_subscription_datagetSongsByGenreId: async () => {
   const query = `
     SELECT 
-      s.id, s.artist, s.category, s.instrument_id, s.track, s.label, s.cover_image, s.lyrics, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.vocals, mf.master_song AS master1
+      s.id, s.artist, s.category, s.instrument_id, s.track, s.label, s.cover_image, s.lyrics, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     ORDER BY s.id DESC
@@ -666,8 +657,7 @@ user_subscription_datagetSongsByGenreId: async () => {
   return await db.query(`
     SELECT 
       s.*, 
-      mf.master_song AS master1,
-      mf.vocals,
+      mf.vocals AS master1,
       mf.solo,
       mf.click_bpm,
       mf.drums,

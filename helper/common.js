@@ -37,6 +37,8 @@ function sendOTP(mobileNumber = '') {
 }
 
 
+
+
 module.exports = {
     getPagination,
     sendOTP

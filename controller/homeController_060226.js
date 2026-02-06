@@ -610,8 +610,8 @@ exports.homePagePaylist = async (req, res) => {
       item.keyboards =
         item.keyboards && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 4)
           ? baseurl_songs + item.keyboards : '';
-      if (!item.master1 && item.master_song) {
-        item.master1 = item.master_song;
+      if (!item.master1 && item.vocals) {
+        item.master1 = item.vocals;
       }
       item.master1 = item.master1 ? baseurl_songs + item.master1 : '';
 
