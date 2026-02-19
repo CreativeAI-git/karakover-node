@@ -4,6 +4,24 @@ module.exports = {
     return await db.query("insert into tbl_users set ?", [user]);
   },
 
+fetchPaymentByUserId: async (userId) => {
+  try {
+    const rows = await db.query(
+      "SELECT payment_status FROM user_subscription WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+      [userId]
+    );
+    // rows will be an array
+    if (rows.length > 0) {
+      return rows[0]; // return the latest payment record
+    } else {
+      return null; // no payment found
+    }
+  } catch (error) {
+    console.log("Error fetching payment:", error);
+    return null;
+  }
+},
+
 
  recorded_songs: async (user) => {
     return db.query("insert into recorded_songs set ?", [user]);

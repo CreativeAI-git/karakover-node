@@ -24,7 +24,7 @@ module.exports = {
   //       tbl_music_files.drums,
   //       tbl_music_files.keyboards,
   //       tbl_music_files.claps,
-  //       tbl_music_files.master_song AS master1
+  //       tbl_music_files.vocals AS master1
   //     FROM tbl_songs
   //     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
   //     WHERE tbl_songs.instrument_id = '1'
@@ -39,7 +39,7 @@ module.exports = {
       tbl_music_files.solo, tbl_music_files.click_bpm,
       tbl_music_files.guitar, tbl_music_files.bass,
       tbl_music_files.drums, tbl_music_files.keyboards,
-      tbl_music_files.claps, tbl_music_files.vocals, tbl_music_files.master_song AS master1
+      tbl_music_files.claps, tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE 1=1
@@ -51,7 +51,7 @@ module.exports = {
       query += " AND instrument_id = ?";
       params.push(instrumentId);
     }
-
+    
     // if (instrumentId) {
     //   query += " AND instrument_id = ?";
     //   params.push(instrumentId);
@@ -61,15 +61,15 @@ module.exports = {
   },
 
   getAllGenres: async () => {
-    return db.query(`
+  return db.query(`
     SELECT id, genre_type, image, created_at
     FROM genre
     ORDER BY created_at ASC
   `);
-  },
+},
 
   getHomeSongsByGenreCategory: async (genreId, instrumentId, category) => {
-    let query = `
+  let query = `
     SELECT 
       s.id,
       s.artist,
@@ -86,24 +86,23 @@ module.exports = {
       mf.drums,
       mf.keyboards,
       mf.claps,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
       AND s.category = ?
   `;
 
-    let params = [genreId, category];
+  let params = [genreId, category];
 
-    // instrument filter (skip if Full Access = 5)
-    if (instrumentId && instrumentId != 5) {
-      query += ` AND s.instrument_id = ?`;
-      params.push(instrumentId);
-    }
+  // instrument filter (skip if Full Access = 5)
+  if (instrumentId && instrumentId != 5) {
+    query += ` AND s.instrument_id = ?`;
+    params.push(instrumentId);
+  }
 
-    return db.query(query, params);
-  },
+  return db.query(query, params);
+},
 
   // getFolk: async () => {
   //   return db.query(
@@ -118,7 +117,7 @@ module.exports = {
            tbl_music_files.solo, tbl_music_files.click_bpm,
            tbl_music_files.guitar, tbl_music_files.bass,
            tbl_music_files.drums, tbl_music_files.keyboards,
-           tbl_music_files.claps, tbl_music_files.vocals, tbl_music_files.master_song AS master1
+           tbl_music_files.claps, tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE genre = 'Folk'  -- optional: can remove if genre_id used
@@ -159,8 +158,7 @@ module.exports = {
       tbl_music_files.drums,
       tbl_music_files.keyboards,
       tbl_music_files.claps,
-      tbl_music_files.vocals,
-      tbl_music_files.master_song AS master1
+      tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE 1=1
@@ -201,8 +199,7 @@ module.exports = {
       tbl_music_files.drums,
       tbl_music_files.keyboards,
       tbl_music_files.claps,
-      tbl_music_files.vocals,
-      tbl_music_files.master_song AS master1
+      tbl_music_files.vocals AS master1
     FROM tbl_songs
     JOIN tbl_music_files ON tbl_music_files.song_id = tbl_songs.id
     WHERE 1=1
@@ -237,14 +234,13 @@ module.exports = {
     );
   },
 
-  getAllSongsByInstrument: async (instrumentId) => {
-    const query = `
+getAllSongsByInstrument: async (instrumentId) => {
+  const query = `
     SELECT 
       s.*,                      -- song table ka id safe rahega
       mf.song_id,
       mf.chords_songs,
-      mf.vocals,
-      mf.master_song AS master1,
+      mf.vocals AS master1,
       mf.solo,
       mf.click_bpm,
       mf.bass,
@@ -264,11 +260,11 @@ module.exports = {
     WHERE s.instrument_id = ? OR ? = 5
     ORDER BY s.id DESC
   `;
-    return db.query(query, [instrumentId, instrumentId]);
-  },
+  return db.query(query, [instrumentId, instrumentId]);
+},
 
-  getUserSubscription: async (user_id) => {
-    const sql = `
+getUserSubscription: async (user_id) => {
+  const sql = `
     SELECT instrument_selected
     FROM user_subscription
     WHERE user_id = ?
@@ -276,34 +272,33 @@ module.exports = {
     ORDER BY created_at DESC
     LIMIT 1
   `;
-    const [result] = await db.query(sql, [user_id]);
-    return result?.instrument_selected || null;
-  },
+  const [result] = await db.query(sql, [user_id]);
+  return result?.instrument_selected || null;
+},
 
 
 
 
-  getLatestSongsBySubscription: async (subscriptionType) => {
-    const sql = `
+getLatestSongsBySubscription:async (subscriptionType) => {
+  const sql = `
     SELECT *
     FROM tbl_songs
     WHERE instrument_id = ?
     ORDER BY created_at DESC
     LIMIT 5
   `;
-    return await db.query(sql, [subscriptionType]);
-  },
+  return await db.query(sql, [subscriptionType]);
+},
 
 
 
-  getyourMoods: async (instrumentId, search = "") => {
-    let query = `
+getyourMoods: async (instrumentId, search = "") => {
+  let query = `
     SELECT 
       s.*,                      
       mf.song_id,
       mf.chords_songs,
-      mf.vocals,
-      mf.master_song AS master1,
+      mf.vocals AS master1,
       mf.solo,
       mf.click_bpm,
       mf.bass,
@@ -323,18 +318,18 @@ module.exports = {
     WHERE 1=1
   `;
 
-    const params = [];
+  const params = [];
 
-    // ===== INSTRUMENT FILTER =====
-    if (instrumentId && instrumentId != 5) {
-      query += ` AND s.instrument_id = ?`;
-      params.push(instrumentId);
-    }
+  // ===== INSTRUMENT FILTER =====
+  if (instrumentId && instrumentId != 5) {
+    query += ` AND s.instrument_id = ?`;
+    params.push(instrumentId);
+  }
 
-    // ===== SEARCH FILTER =====
-    if (search && search.trim() !== "") {
-      const keyword = `%${search}%`;
-      query += `
+  // ===== SEARCH FILTER =====
+  if (search && search.trim() !== "") {
+    const keyword = `%${search}%`;
+    query += `
       AND (
         s.track LIKE ?
         OR s.label LIKE ?
@@ -342,30 +337,30 @@ module.exports = {
         OR s.artist LIKE ?
       )
     `;
-      params.push(keyword, keyword, keyword, keyword);
-    }
+    params.push(keyword, keyword, keyword, keyword);
+  }
 
-    query += ` ORDER BY s.id DESC`;
+  query += ` ORDER BY s.id DESC`;
 
-    return db.query(query, params);
-  },
-
-
+  return db.query(query, params);
+},
 
 
 
 
 
-  //   getAllSongsByInstrument:async (instrumentId) => {
-  //   let query = `
-  //     SELECT *
-  //     FROM tbl_songs s
-  //     JOIN tbl_music_files mf ON mf.song_id = s.id
-  //     WHERE s.instrument_id = ? OR ? = 5
-  //     ORDER BY s.id DESC
-  //   `;
-  //   return db.query(query, [instrumentId, instrumentId]);
-  // },
+
+
+//   getAllSongsByInstrument:async (instrumentId) => {
+//   let query = `
+//     SELECT *
+//     FROM tbl_songs s
+//     JOIN tbl_music_files mf ON mf.song_id = s.id
+//     WHERE s.instrument_id = ? OR ? = 5
+//     ORDER BY s.id DESC
+//   `;
+//   return db.query(query, [instrumentId, instrumentId]);
+// },
 
 
   get_songs_by_genre_name: async (genreName) => {
@@ -406,50 +401,50 @@ module.exports = {
   //   return await db.query("SELECT * FROM tbl_songs WHERE genre = ? AND instrument_id = ?", [genre_id, instrument_id]);
   // },
 
-  //   getSongsByGenreId: async (genre_id) => {
-  //   return db.query(`
-  //     SELECT DISTINCT s.*, mf.*
-  //     FROM tbl_songs s
-  //     JOIN tbl_music_files mf ON mf.song_id = s.id
-  //     WHERE s.genre = ?
-  //     ORDER BY s.id DESC
-  //   `, [genre_id]);
-  // },
+//   getSongsByGenreId: async (genre_id) => {
+//   return db.query(`
+//     SELECT DISTINCT s.*, mf.*
+//     FROM tbl_songs s
+//     JOIN tbl_music_files mf ON mf.song_id = s.id
+//     WHERE s.genre = ?
+//     ORDER BY s.id DESC
+//   `, [genre_id]);
+// },
 
-  // getSongsByGenreIdAndInstrument: async (genre_id, instrument_id) => {
-  //   const query = `
-  //     SELECT 
-  //       s.id, s.artist, s.category, s.instrument_id, s.track, s.label, s.cover_image, s.lyrics,
-  //       mf.solo, mf.click_bpm, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.master_song AS master1
-  //     FROM tbl_songs s
-  //     JOIN tbl_music_files mf ON mf.song_id = s.id
-  //     WHERE s.genre = ? AND s.instrument_id = ?
-  //     ORDER BY s.id DESC
-  //   `;
-  //   return db.query(query, [genre_id, instrument_id]);
-  // },
-  getSongsByGenreAndInstrument: async (genre_id, instrument_id) => {
+// getSongsByGenreIdAndInstrument: async (genre_id, instrument_id) => {
+//   const query = `
+//     SELECT 
+//       s.id, s.artist, s.category, s.instrument_id, s.track, s.label, s.cover_image, s.lyrics,
+//       mf.solo, mf.click_bpm, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.vocals AS master1
+//     FROM tbl_songs s
+//     JOIN tbl_music_files mf ON mf.song_id = s.id
+//     WHERE s.genre = ? AND s.instrument_id = ?
+//     ORDER BY s.id DESC
+//   `;
+//   return db.query(query, [genre_id, instrument_id]);
+// },
+getSongsByGenreAndInstrument: async (genre_id, instrument_id) => {
 
-    let conditions = [];
-    let values = [];
+  let conditions = [];
+  let values = [];
 
-    // Genre condition
-    if (genre_id != 19) {
-      conditions.push("s.genre = ?");
-      values.push(genre_id);
-    }
+  // Genre condition
+  if (genre_id != 19) {
+    conditions.push("s.genre = ?");
+    values.push(genre_id);
+  }
 
-    // Instrument condition
-    if (instrument_id != 5) {
-      conditions.push("s.instrument_id = ?");
-      values.push(instrument_id);
-    }
+  // Instrument condition
+  if (instrument_id != 5) {
+    conditions.push("s.instrument_id = ?");
+    values.push(instrument_id);
+  }
 
-    const whereClause = conditions.length
-      ? `WHERE ${conditions.join(" AND ")}`
-      : "";
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(" AND ")}`
+    : "";
 
-    return db.query(`
+  return db.query(`
     SELECT DISTINCT
       s.*,
       mf.solo,
@@ -459,144 +454,127 @@ module.exports = {
       mf.drums,
       mf.keyboards,
       mf.claps,
-      mf.master_song AS master1,
-      mf.vocals
+      mf.vocals AS master1
     FROM tbl_songs s
     LEFT JOIN tbl_music_files mf ON mf.song_id = s.id
     ${whereClause}
     ORDER BY s.id DESC
   `, values);
-  },
+},
 
-  getSongs_All: async () => {
-    return db.query(`
+getSongs_All: async () => {
+  return db.query(`
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     ORDER BY s.id DESC
   `);
-  },
+},
 
 
-  getSongs_All_By_Instrument: async (instrument_id) => {
-    return db.query(`
+getSongs_All_By_Instrument: async (instrument_id) => {
+  return db.query(`
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.instrument_id = ?
     ORDER BY s.id DESC
   `, [instrument_id]);
-  },
+},
 
-  getSongs_By_Genre: async (genre_id) => {
-    return db.query(`
+getSongs_By_Genre: async (genre_id) => {
+  return db.query(`
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
     ORDER BY s.id DESC
   `, [genre_id]);
-  },
+},
 
 
 
 
-  getSongs_By_Genre_And_Instrument: async (genre_id, instrument_id) => {
-    return db.query(`
+getSongs_By_Genre_And_Instrument: async (genre_id, instrument_id) => {
+  return db.query(`
     SELECT DISTINCT 
       s.*,
       mf.*,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
       AND s.instrument_id = ?
     ORDER BY s.id DESC
   `, [genre_id, instrument_id]);
-  },
+},
 
 
-  getInstrumentDataById: async (instrument_id) => {
-    // Yeh function ek hi instrument row return karega, jo song ke instrument_id se match kare
-    const rows = await db.query(`
+getInstrumentDataById:async (instrument_id) => {
+  // Yeh function ek hi instrument row return karega, jo song ke instrument_id se match kare
+  const rows = await db.query(`
     SELECT id, instrument, cost, image, created_at
     FROM tbl_instruments
     WHERE id = ?
     LIMIT 1
   `, [instrument_id]);
 
+  return rows[0] || null;
+},
+
+// Get instrument data from genre table based on genre_id
+getInstrumentDataByGenreId:async (genre_id) => {
+  try {
+    const rows = await db.query(
+      `SELECT id, genre_type, image, created_at
+       FROM tbl_genre
+       WHERE id = ? LIMIT 1`,
+      [genre_id]
+    );
     return rows[0] || null;
-  },
+  } catch (error) {
+    console.error("Error in getInstrumentDataByGenreId:", error);
+    return null;
+  }
+},
 
-  // Get instrument data from genre table based on genre_id
-  getInstrumentDataByGenreId: async (genre_id) => {
-    try {
-      const rows = await db.query(
-        `SELECT id, genre_type, image, created_at
-       FROM tbl_genre
-       WHERE id = ? LIMIT 1`,
-        [genre_id]
-      );
-      return rows[0] || null;
-    } catch (error) {
-      console.error("Error in getInstrumentDataByGenreId:", error);
-      return null;
-    }
-  },
+// getInstrumentDataByGenreId:async (genre_id) => {
+//   const rows = await db.query(
+//     `SELECT 
+//        id,
+//        genre_type,
+//        image,
+//        created_at
+//      FROM tbl_genre
+//      WHERE id = ?
+//      LIMIT 1`,
+//     [genre_id]
+//   );
 
-  // created by @Krishn 19-02-2026
-  getGenreDataByGenreId: async (genre_id) => {
-    try {
-      const rows = await db.query(
-        `SELECT id, genre_type, image, created_at
-       FROM tbl_genre
-       WHERE id = ? LIMIT 1`,
-        [genre_id]
-      );
-      return rows[0] || null;
-    } catch (error) {
-      console.error("Error in getGenretDataByGenreId:", error);
-      return null;
-    }
-  },
+//   if (!rows.length) return null;
 
-  // getInstrumentDataByGenreId:async (genre_id) => {
-  //   const rows = await db.query(
-  //     `SELECT 
-  //        id,
-  //        genre_type,
-  //        image,
-  //        created_at
-  //      FROM tbl_genre
-  //      WHERE id = ?
-  //      LIMIT 1`,
-  //     [genre_id]
-  //   );
+//   const data = rows[0];
 
-  //   if (!rows.length) return null;
+//   // ✅ base URL yahin lagta hai
+//   if (data.image) {
+//     data.image = baseurl_instrument + data.image;
+//   }
 
-  //   const data = rows[0];
-
-  //   // ✅ base URL yahin lagta hai
-  //   if (data.image) {
-  //     data.image = baseurl_instrument + data.image;
-  //   }
-
-  //   return data;
-  // },
+//   return data;
+// },
 
 
-  getSongs_By_InstrumentOnly: async (instrument_id) => {
-    return db.query(`
+getSongs_By_InstrumentOnly: async (instrument_id) => {
+  return db.query(`
     SELECT DISTINCT 
       s.*, 
       mf.solo,
@@ -606,18 +584,17 @@ module.exports = {
       mf.bass,
       mf.keyboards,
       mf.claps,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.instrument_id = CAST(? AS UNSIGNED)
     ORDER BY s.id DESC
   `, [instrument_id]);
-  },
+},
 
 
-  getSongsByGenreIdAndInstrument: async (genre_id) => {
-    return db.query(`
+getSongsByGenreIdAndInstrument: async (genre_id) => {
+  return db.query(`
     SELECT DISTINCT 
       s.*, 
       mf.solo,
@@ -626,17 +603,16 @@ module.exports = {
       mf.guitar,
       mf.bass,
       mf.keyboards,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     WHERE s.genre = ?
     ORDER BY s.id DESC
   `, [genre_id]);
-  },
+},
 
-  getSongsByAllGenres: async () => {
-    return db.query(`
+getSongsByAllGenres: async () => {
+  return db.query(`
     SELECT DISTINCT 
       s.*,
       mf.solo,
@@ -646,25 +622,24 @@ module.exports = {
       mf.drums,
       mf.keyboards,
       mf.claps,
-      mf.vocals,
-      mf.master_song AS master1
+      mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     ORDER BY s.id DESC
   `);
-  },
+},
 
 
-  user_subscription_datagetSongsByGenreId: async () => {
-    const query = `
+user_subscription_datagetSongsByGenreId: async () => {
+  const query = `
     SELECT 
-      s.id, s.artist, s.category, s.instrument_id, s.track, s.label, s.cover_image, s.lyrics, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.vocals, mf.master_song AS master1
+      s.id, s.artist, s.category, s.instrument_id, s.track, s.label, s.cover_image, s.lyrics, mf.guitar, mf.bass, mf.drums, mf.keyboards, mf.claps, mf.vocals AS master1
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
     ORDER BY s.id DESC
   `;
-    return db.query(query);
-  },
+  return db.query(query);
+},
 
   // getSongsByGenreId: async () => {
   //   try {
@@ -679,11 +654,10 @@ module.exports = {
   // },
 
   getSongsByGenreId: async (genre_id) => {
-    return await db.query(`
+  return await db.query(`
     SELECT 
       s.*, 
-      mf.master_song AS master1,
-      mf.vocals,
+      mf.vocals AS master1,
       mf.solo,
       mf.click_bpm,
       mf.drums,
@@ -695,7 +669,7 @@ module.exports = {
     WHERE s.genre = ?
     ORDER BY s.id DESC
   `, [genre_id]);
-  },
+},
 
 
   get_songs_by_instrument_id: async (instrument_id) => {
@@ -781,26 +755,8 @@ module.exports = {
 
   get_genre_data_from_database: async (recorded_song_id) => {
     return await db.query(
-      `SELECT * FROM tbl_genre ORDER BY id DESC `
+      `SELECT * FROM tbl_genre ORDER BY created_at DESC `
     );
-  },
-
-  // created by @Krishn 19-02-2026
-  get_instrument_data_from_database: async (instrumentId) => {
-
-    if (instrumentId == 5) {
-      // Get all instruments
-      return await db.query(
-        `SELECT * FROM tbl_instruments ORDER BY id DESC`
-      );
-    } else {
-      // Get specific instrument
-      return await db.query(
-        `SELECT * FROM tbl_instruments WHERE id = ? ORDER BY id DESC`,
-        [instrumentId]
-      );
-    }
-
   },
 
   delete_recorded_song_by_recorded_song_id: async (recorded_song_id) => {

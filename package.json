@@ -23,6 +23,7 @@
     "fcm-node": "^1.6.1",
     "FormData": "^0.10.1",
     "fs": "^0.0.1-security",
+    "get-mp3-duration": "^1.0.0",
     "http": "^0.0.1-security",
     "https": "^1.0.0",
     "joi": "^17.7.1",
