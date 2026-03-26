@@ -1587,6 +1587,14 @@ exports.get_mobile_banners_api = async (req, res) => {
         item.banner = baseurl_banners + item.banner;
       }
 
+      // For video banners, add base URL for thumbnail_image (same path as banners)
+      if (bannerType === "video"
+        && item.thumbnail_image
+        && typeof item.thumbnail_image === "string"
+        && !item.thumbnail_image.startsWith("http")) {
+        item.thumbnail_image = baseurl_banners + item.thumbnail_image;
+      }
+
       return item;
     });
 
