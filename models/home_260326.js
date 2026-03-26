@@ -803,13 +803,6 @@ module.exports = {
 
   },
 
-  // created by @Krishn 26-03-2026
-  get_mobile_banners: async () => {
-    return await db.query(
-      `SELECT * FROM mobile_banners ORDER BY id DESC`
-    );
-  },
-
   delete_recorded_song_by_recorded_song_id: async (recorded_song_id) => {
     return db.query(
       `DELETE FROM recorded_songs WHERE id = '${recorded_song_id}' `
