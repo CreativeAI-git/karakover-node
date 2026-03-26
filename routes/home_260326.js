@@ -10,6 +10,5 @@ router.post("/homePagePaylistsearch", auth, homeController.homePagePaylistsearch
 router.post("/get_song", homeController.get_song);
 router.post("/category", appController.getSongsByCategory);
 router.post("/categoryPaylist", auth, appController.getSongsByCategoryPaylist);
-router.get("/mobileBanners", homeController.get_mobile_banners_api);
 
 module.exports = router;

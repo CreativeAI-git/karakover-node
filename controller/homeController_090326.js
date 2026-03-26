@@ -39,7 +39,9 @@ const {
   getAllSongsByInstrument,
   getyourMoods,
   getUserSubscription,
-  getLatestSongsBySubscription
+  getLatestSongsBySubscription,
+  get_instrument_data_from_database,
+  getGenreDataByGenreId
 } = require("../models/home");
 
 const {
@@ -1486,7 +1488,7 @@ exports.get_genre_data_api = async (req, res) => {
       return res.json({
         status: 200,
         success: true,
-        message: "Genry Data Retrived Successfully",
+        message: "Genre Data Retrived Successfully",
         data: []
       });
     }
@@ -1500,8 +1502,50 @@ exports.get_genre_data_api = async (req, res) => {
     return res.json({
       status: 200,
       success: true,
-      message: "Genry Data Retrived Successfully",
+      message: "Genre Data Retrived Successfully",
       data: genre_data
+    });
+
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: "Internal server error",
+      status: 500,
+      error: error,
+    });
+  }
+};
+
+// created by @Krishn 19-02-2026
+exports.get_instrument_data_api = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const [user_subscription] = await user_subscription_data(user_id);
+    const instrumentSelected = user_subscription?.instrument_selected;
+
+    const instrument_data = await get_instrument_data_from_database(instrumentSelected)
+
+    if (instrument_data.length == 0) {
+      return res.json({
+        status: 200,
+        success: true,
+        message: "Instrument Data Retrived Successfully",
+        data: []
+      });
+    }
+
+    instrument_data.map((instrument) => {
+      if (instrument.image && !instrument.image.startsWith('http')) {
+        instrument.image = 'https://159.223.251.167/assets/instrument/' + instrument.image
+      }
+    })
+
+    return res.json({
+      status: 200,
+      success: true,
+      message: "Instrument Data Retrived Successfully",
+      data: instrument_data
     });
 
   } catch (error) {
@@ -1612,6 +1656,105 @@ exports.get_songs_by_genre = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in get_songs_by_genre:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      status: 500,
+      error: error.message || error,
+    });
+  }
+};
+
+// created by @Krishn 19-02-2026
+exports.get_songs_by_instrument = async (req, res) => {
+  try {
+    const { instrument_id, user_id } = req.body;
+
+    const schema = Joi.object({
+      instrument_id: Joi.number().required(),
+      user_id: Joi.number().required(),
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+      return res.json({
+        success: false,
+        status: 400,
+        message: error.details[0].message,
+      });
+    }
+
+    let songs = [];
+
+    // ===== CASE LOGIC =====
+    if (instrument_id == 5) {
+      songs = await getSongs_All();
+    } else {
+      songs = await getSongs_All_By_Instrument(instrument_id);
+    }
+
+    if (!songs || songs.length === 0) {
+      return res.json({
+        success: true,
+        status: 200,
+        message: "Instrument songs fetched successfully",
+        data: [],
+      });
+    }
+
+    // ===== PROCESS SONGS =====
+    const processedSongs = await Promise.all(
+      songs.map(async (song) => {
+
+        // favorite
+        const [favorite_data] = await get_favorite_data(user_id, song.id);
+        song.is_favorite = !!favorite_data;
+
+        const genre_data = await getGenreDataByGenreId(song.genre);
+
+        // image base url
+        if (genre_data?.image) {
+          genre_data.image = baseurl_cover + genre_data.image;
+        }
+
+        song.genre_data = genre_data;
+
+        // artist
+        const [artist_data] = await get_artist_data_artist_id(song.artist);
+        song.artist_name = artist_data?.artist_name || null;
+
+        // base urls
+        if (song.cover_image) song.cover_image = baseurl_cover + song.cover_image;
+        if (song.solo) song.solo = baseurl_songs + song.solo;
+        if (song.click_bpm) song.click_bpm = baseurl_songs + song.click_bpm;
+
+        // ONLY THIS LINE ADDED — NOTHING ELSE
+        if (!song.master1 && song.vocals) {
+          song.master1 = song.vocals;
+        }
+        if (song.master1) {
+          song.master1 = baseurl_songs + song.master1;
+        }
+
+        song.guitar = song.guitar ? baseurl_songs + song.guitar : "";
+        song.bass = song.bass ? baseurl_songs + song.bass : "";
+        song.drums = song.drums ? baseurl_songs + song.drums : "";
+        song.keyboards = song.keyboards ? baseurl_songs + song.keyboards : "";
+
+        return song;
+      })
+    );
+
+
+
+    return res.json({
+      success: true,
+      status: 200,
+      message: "Instrument songs fetched successfully",
+      data: processedSongs,
+    });
+  } catch (error) {
+    console.error("Error in get_songs_by_instrument:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",

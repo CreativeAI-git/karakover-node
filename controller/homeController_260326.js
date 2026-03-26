@@ -41,8 +41,7 @@ const {
   getUserSubscription,
   getLatestSongsBySubscription,
   get_instrument_data_from_database,
-  getGenreDataByGenreId,
-  get_mobile_banners
+  getGenreDataByGenreId
 } = require("../models/home");
 
 const {
@@ -56,7 +55,6 @@ const base_url = BaseURl + "/assets/";
 
 const baseurl_songs = base_url + "songs/";
 const baseurl_cover = base_url + "cover/";
-const baseurl_banners = BaseURl + "/assets/mobile_banners/";
 
 
 const formatResponse = (list = []) => {
@@ -1300,6 +1298,7 @@ exports.get_song = async (req, res) => {
     // 🔹 Step 1: Recorded songs
     let get_song = await get_recorded_song(user_id);
 
+    console.log('song_data', get_song);
     // 🔹 Step 2: If NO recorded song → fetch default 5 latest songs
     if (!get_song || get_song.length === 0) {
       const subscriptionType = await getUserSubscription(user_id);
@@ -1319,6 +1318,7 @@ exports.get_song = async (req, res) => {
     await Promise.all(
       get_song.map(async (item) => {
         const [song_data] = await get_songs_data_song_id(item.song_id || item.id);
+        console.log('song_data', song_data);
         const [artist_data] = await get_artist_data_artist_id(song_data.artist);
         const userdata = await fetchUserBy_Id(user_id);
 
@@ -1548,53 +1548,6 @@ exports.get_instrument_data_api = async (req, res) => {
       success: true,
       message: "Instrument Data Retrived Successfully",
       data: instrument_data
-    });
-
-  } catch (error) {
-    console.log(error);
-    return res.json({
-      success: false,
-      message: "Internal server error",
-      status: 500,
-      error: error,
-    });
-  }
-};
-
-// created by @Krishn 26-03-2026
-exports.get_mobile_banners_api = async (req, res) => {
-  try {
-    const banners = await get_mobile_banners();
-
-    if (!banners || banners.length === 0) {
-      return res.json({
-        status: 200,
-        success: true,
-        message: "Mobile Banners Retrieved Successfully",
-        data: []
-      });
-    }
-
-    const updated = banners.map((banner) => {
-      const item = { ...banner };
-      const bannerType = (item.type || "").toString().toLowerCase();
-
-      // Only image/video need base URL, text should remain as-is
-      if ((bannerType === "image" || bannerType === "video")
-        && item.banner
-        && typeof item.banner === "string"
-        && !item.banner.startsWith("http")) {
-        item.banner = baseurl_banners + item.banner;
-      }
-
-      return item;
-    });
-
-    return res.json({
-      status: 200,
-      success: true,
-      message: "Mobile Banners Retrieved Successfully",
-      data: updated
     });
 
   } catch (error) {
