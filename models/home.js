@@ -827,4 +827,12 @@ module.exports = {
   get_artist_data_artist_id: async (artist_id) => {
     return db.query(`SELECT * from tbl_artists  where id = '${artist_id}' `);
   },
+
+ fetchPrivacyPolicy: async () => {
+    return db.query("select * from tbl_terms_and_condition where id = 2");
+  },
+
+  fetchTermAndCondition: async () => {
+    return db.query("select * from tbl_terms_and_condition where id = 1");
+  },
 };

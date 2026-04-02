@@ -9,11 +9,328 @@ const baseurl_cover01 = base_url + "cover/";
 const baseurl_instrument = base_url + "instrument/";
 
 exports.redirectToPP = async (req, res) => {
-  res.sendFile(__dirname + "/view/privacyPolicy.html");
+  const privacyPolicy = await fetchPrivacyPolicy();
+  res.send(
+    `<!DOCTYPE html>
+      <html>
+        <head>
+            <title> Karakover App</title>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="icon" type="image/png" sizes="16x16" href="https://159.223.251.167/assets/fav-icon.png">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+            <style type="text/css">
+                @media screen {
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: normal;
+                        font-weight: 400;
+                        src: local('Lato Regular'), local('Lato-Regular'), url(https://fonts.gstatic.com/s/lato/v11/qIIYRU-oROkIk8vfvxw6QvesZW2xOQ-xsNqO47m55DA.woff) format('woff');
+                    }
+
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: normal;
+                        font-weight: 700;
+                        src: local('Lato Bold'), local('Lato-Bold'), url(https://fonts.gstatic.com/s/lato/v11/qdgUG4U09HnJwhYI-uK18wLUuEpTyoUstqEm5AMlJo4.woff) format('woff');
+                    }
+
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: italic;
+                        font-weight: 400;
+                        src: local('Lato Italic'), local('Lato-Italic'), url(https://fonts.gstatic.com/s/lato/v11/RYyZNoeFgb0l7W3Vu1aSWOvvDin1pK8aKteLpeZ5c0A.woff) format('woff');
+                    }
+
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: italic;
+                        font-weight: 700;
+                        src: local('Lato Bold Italic'), local('Lato-BoldItalic'), url(https://fonts.gstatic.com/s/lato/v11/HkF_qI1x_noxlxhrhMQYELO3LdcAZYWl9Si6vvxL-qU.woff) format('woff');
+                    }
+                }
+
+                /* CLIENT-SPECIFIC STYLES */
+                body,
+                table,
+                td,
+                a {
+                    -webkit-text-size-adjust: 100%;
+                    -ms-text-size-adjust: 100%;
+                }
+
+                table,
+                td {
+                    mso-table-lspace: 0pt;
+                    mso-table-rspace: 0pt;
+                }
+
+                img {
+                    -ms-interpolation-mode: bicubic;
+                }
+
+                /* RESET STYLES */
+                img {
+                    border: 0;
+                    height: auto;
+                    line-height: 100%;
+                    outline: none;
+                    text-decoration: none;
+                }
+
+                table {
+                    border-collapse: collapse !important;
+                }
+
+                body {
+                    height: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                }
+
+                /* iOS BLUE LINKS */
+                a[x-apple-data-detectors] {
+                    color: inherit !important;
+                    text-decoration: none !important;
+                    font-size: inherit !important;
+                    font-family: inherit !important;
+                    font-weight: inherit !important;
+                    line-height: inherit !important;
+                }
+
+                /* MOBILE STYLES */
+                @media screen and (max-width:600px) {
+                    h1 {
+                        font-size: 32px !important;
+                        line-height: 32px !important;
+                    }
+                }
+
+                /* ANDROID CENTER FIX */
+                div[style*="margin: 16px 0;"] {
+                    margin: 0 !important;
+                }
+
+
+                /* ct css S */
+                /*  .ct_sec_padd{
+                    padding-block: 70px; 
+                } */
+
+                .ct_logo {
+                    text-align: center;
+                    margin-bottom: 50px;
+                }
+
+                footer {
+            background-color: #ffe5f4;
+            padding: 15px;
+            text-align: center;
+        }
+        footer p{
+          margin-bottom: 0px;
+        }
+            </style>
+        </head>
+
+        <body style="background-color: #f4f4f4; margin: 0 !important; padding: 0 !important;">
+            <section class="ct_sec_padd"> 
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td bgcolor="#333" align="center">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
+                                <tr>
+                                    <td align="center" valign="top" style="padding: 40px 10px 40px 10px;">
+                                        <img src="https://159.223.251.167/frontendassets/img/logo.png" style="width: 100%; object-fit: contain;" alt="" title="Wooo">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>    
+                <div class="container py-5">
+                  <div class="row">
+                    <div class="col-md-12">
+                      ${privacyPolicy[0].info}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+
+            <footer>
+                <p>Copyright © ${new Date().getFullYear()}. All Right Reserved.</p>
+            </footer>
+        </body>
+      </html>`
+  )
+  // res.sendFile(__dirname + "/view/privacyPolicy.html");
 };
 
 exports.redirectTerms = async (req, res) => {
-  res.sendFile(__dirname + "/view/termsAndconditions.html");
+  const termsAndconditions = await fetchTermAndCondition();
+  res.send(
+    `<!DOCTYPE html>
+      <html>
+        <head>
+            <title> Karakover App</title>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="icon" type="image/png" sizes="16x16" href="https://159.223.251.167/assets/fav-icon.png">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+            <style type="text/css">
+                @media screen {
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: normal;
+                        font-weight: 400;
+                        src: local('Lato Regular'), local('Lato-Regular'), url(https://fonts.gstatic.com/s/lato/v11/qIIYRU-oROkIk8vfvxw6QvesZW2xOQ-xsNqO47m55DA.woff) format('woff');
+                    }
+
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: normal;
+                        font-weight: 700;
+                        src: local('Lato Bold'), local('Lato-Bold'), url(https://fonts.gstatic.com/s/lato/v11/qdgUG4U09HnJwhYI-uK18wLUuEpTyoUstqEm5AMlJo4.woff) format('woff');
+                    }
+
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: italic;
+                        font-weight: 400;
+                        src: local('Lato Italic'), local('Lato-Italic'), url(https://fonts.gstatic.com/s/lato/v11/RYyZNoeFgb0l7W3Vu1aSWOvvDin1pK8aKteLpeZ5c0A.woff) format('woff');
+                    }
+
+                    @font-face {
+                        font-family: 'Lato';
+                        font-style: italic;
+                        font-weight: 700;
+                        src: local('Lato Bold Italic'), local('Lato-BoldItalic'), url(https://fonts.gstatic.com/s/lato/v11/HkF_qI1x_noxlxhrhMQYELO3LdcAZYWl9Si6vvxL-qU.woff) format('woff');
+                    }
+                }
+
+                /* CLIENT-SPECIFIC STYLES */
+                body,
+                table,
+                td,
+                a {
+                    -webkit-text-size-adjust: 100%;
+                    -ms-text-size-adjust: 100%;
+                }
+
+                table,
+                td {
+                    mso-table-lspace: 0pt;
+                    mso-table-rspace: 0pt;
+                }
+
+                img {
+                    -ms-interpolation-mode: bicubic;
+                }
+
+                /* RESET STYLES */
+                img {
+                    border: 0;
+                    height: auto;
+                    line-height: 100%;
+                    outline: none;
+                    text-decoration: none;
+                }
+
+                table {
+                    border-collapse: collapse !important;
+                }
+
+                body {
+                    height: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                }
+
+                /* iOS BLUE LINKS */
+                a[x-apple-data-detectors] {
+                    color: inherit !important;
+                    text-decoration: none !important;
+                    font-size: inherit !important;
+                    font-family: inherit !important;
+                    font-weight: inherit !important;
+                    line-height: inherit !important;
+                }
+
+                /* MOBILE STYLES */
+                @media screen and (max-width:600px) {
+                    h1 {
+                        font-size: 32px !important;
+                        line-height: 32px !important;
+                    }
+                }
+
+                /* ANDROID CENTER FIX */
+                div[style*="margin: 16px 0;"] {
+                    margin: 0 !important;
+                }
+
+
+                /* ct css S */
+                /*  .ct_sec_padd{
+                    padding-block: 70px; 
+                } */
+
+                .ct_logo {
+                    text-align: center;
+                    margin-bottom: 50px;
+                }
+
+                footer {
+            background-color: #ffe5f4;
+            padding: 15px;
+            text-align: center;
+        }
+        footer p{
+          margin-bottom: 0px;
+        }
+            </style>
+        </head>
+
+        <body style="background-color: #f4f4f4; margin: 0 !important; padding: 0 !important;">
+            <section class="ct_sec_padd"> 
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td bgcolor="#333" align="center">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
+                                <tr>
+                                    <td align="center" valign="top" style="padding: 40px 10px 40px 10px;">
+                                        <img src="https://159.223.251.167/frontendassets/img/logo.png" style="width: 100%; object-fit: contain;" alt="" title="Wooo">
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <div class="container py-5">
+                  <div class="row">
+                    <div class="col-md-12">
+                      ${termsAndconditions[0].info}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <footer>
+                <p>Copyright © ${new Date().getFullYear()}. All Right Reserved.</p>
+            </footer>
+        </body>
+      </html>`
+  )
+  // res.sendFile(__dirname + "/view/termsAndconditions.html");
 };
 
 const {
@@ -40,6 +357,7 @@ const {
   recorded_songs,
   fetchInstrumentUserid
 } = require("../models/users");
+const { fetchPrivacyPolicy, fetchTermAndCondition } = require("../models/home");
 
 exports.instrumentList = async (req, res) => {
   try {

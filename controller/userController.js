@@ -258,6 +258,18 @@ exports.login = async (req, res) => {
 
     const user = userResult[0];
 
+    // Block soft-deleted users
+    const isDeleted =
+      user.is_deleted == 1 ||
+      (user.deleted_at && user.deleted_at !== "0000-00-00 00:00:00");
+    if (isDeleted) {
+      return res.json({
+        message: "Account has been deleted. Please contact support.",
+        success: false,
+        status: 403,
+      });
+    }
+
     // Check password
     const match = bcrypt.compareSync(password, user.password);
     if (!match) {
