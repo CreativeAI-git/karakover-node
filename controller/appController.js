@@ -17,7 +17,7 @@ exports.redirectToPP = async (req, res) => {
             <title> Karakover App</title>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link rel="icon" type="image/png" sizes="16x16" href="https://159.223.251.167/assets/fav-icon.png">
+            <link rel="icon" type="image/png" sizes="16x16" href="https://karakover.com/assets/fav-icon.png">
             <meta http-equiv="X-UA-Compatible" content="IE=edge" />
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -144,7 +144,7 @@ exports.redirectToPP = async (req, res) => {
                             <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
                                 <tr>
                                     <td align="center" valign="top" style="padding: 40px 10px 40px 10px;">
-                                        <img src="https://159.223.251.167/frontendassets/img/logo.png" style="width: 100%; object-fit: contain;" alt="" title="Wooo">
+                                        <img src="https://karakover.com/frontendassets/img/logo.png" style="width: 100%; object-fit: contain;" alt="" title="Wooo">
                                     </td>
                                 </tr>
                             </table>
@@ -180,7 +180,7 @@ exports.redirectTerms = async (req, res) => {
             <title> Karakover App</title>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link rel="icon" type="image/png" sizes="16x16" href="https://159.223.251.167/assets/fav-icon.png">
+            <link rel="icon" type="image/png" sizes="16x16" href="https://karakover.com/assets/fav-icon.png">
             <meta http-equiv="X-UA-Compatible" content="IE=edge" />
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -307,7 +307,7 @@ exports.redirectTerms = async (req, res) => {
                             <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
                                 <tr>
                                     <td align="center" valign="top" style="padding: 40px 10px 40px 10px;">
-                                        <img src="https://159.223.251.167/frontendassets/img/logo.png" style="width: 100%; object-fit: contain;" alt="" title="Wooo">
+                                        <img src="https://karakover.com/frontendassets/img/logo.png" style="width: 100%; object-fit: contain;" alt="" title="Wooo">
                                     </td>
                                 </tr>
                             </table>
@@ -803,7 +803,7 @@ exports.getSongsById = async (req, res) => {
 
       if (results.length !== 0) {
         let base_url = S3_URL;
-        const base_cover_url = 'https://159.223.251.167/assets/cover/';
+        const base_cover_url = 'https://karakover.com/assets/cover/';
 
         await Promise.all(
           results.map(async (item) => {
@@ -1008,8 +1008,8 @@ exports.getSongsById = async (req, res) => {
 //         await Promise.all(
 //           results.map(async (item) => {
 //             let allurl = [];
-//             let base_cover_url = 'https://159.223.251.167/assets/cover/'
-//             // let base_songs_url = 'https://159.223.251.167/assets/songs/'
+//             let base_cover_url = 'https://karakover.com/assets/cover/'
+//             // let base_songs_url = 'https://karakover.com/assets/songs/'
 //             if (item.cover_image && !item.cover_image.startsWith('http')) {
 //               item.cover_image = base_cover_url + item.cover_image
 //             }

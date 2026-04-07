@@ -1,6 +1,5 @@
-// const baseURL = "https://159.223.251.167";
-const baseURL = "https://159.223.251.167";
-// const base_URL = "https://159.223.251.167:3000";
- 
-module.exports = baseURL; 
- 
+// const baseURL = "https://karakover.com";
+const baseURL = "https://karakover.com";
+// const base_URL = "https://api.karakover.com";
+
+module.exports = baseURL;

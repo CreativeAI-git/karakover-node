@@ -135,7 +135,7 @@ exports.signup = async (req, res) => {
                                          <div align="center"></div>
                                          <p></p>
                                          <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
-                                         <p style="color:#333"> Please <a href="https://159.223.251.167:3000/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
+                                         <p style="color:#333"> Please <a href="https://api.karakover.com/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
                                       </center>
                                    </td>
                                 </tr>
@@ -154,9 +154,9 @@ exports.signup = async (req, res) => {
                   //fetch user details
                   if (result[0]["image"] != "") {
                     profileImage =
-                      "https://159.223.251.167:3000/uploads/" +
+                      "https://api.karakover.com/uploads/" +
                       result[0]["image"];
-                    // "https://159.223.251.167:3000/uploads/" +
+                    // "https://api.karakover.com/uploads/" +
                     // result[0]["image"];
                   } else {
                     profileImage = "";
@@ -306,7 +306,7 @@ exports.login = async (req, res) => {
     // Profile image
     let profileImage = "";
     if (user.image && user.image !== "") {
-      profileImage = "https://159.223.251.167:3000/uploads/" + user.image;
+      profileImage = "https://api.karakover.com/uploads/" + user.image;
     }
     user.image = profileImage;
 
@@ -502,7 +502,7 @@ exports.forgetPassword = async (req, res) => {
         <tr>
           <td align="center" style="padding:50px 20px 10px;">
  
-            <img src="https://159.223.251.167:3000/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
+            <img src="https://api.karakover.com/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
             <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
                        font-size:20px;color:#fff;">
               Reset Your Password
@@ -523,7 +523,7 @@ exports.forgetPassword = async (req, res) => {
         <!-- Button -->
         <tr>
           <td align="center" style="padding:20px 20px 50px;">
-            <a href="https://159.223.251.167:3000/verifyPassword/${token}"
+            <a href="https://api.karakover.com/verifyPassword/${token}"
                style="display:inline-block;
                       padding:14px 28px;
                       background:#0D8EC5;
@@ -670,8 +670,8 @@ exports.userProfile = async (req, res) => {
           profileImage = "";
         } else {
           profileImage =
-            "https://159.223.251.167:3000/uploads/" + results[0]["image"];
-          // "https://159.223.251.167:3000/uploads/" + result[0]["image"];
+            "https://api.karakover.com/uploads/" + results[0]["image"];
+          // "https://api.karakover.com/uploads/" + result[0]["image"];
         }
 
         let userdetail = {
