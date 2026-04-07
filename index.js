@@ -16,9 +16,9 @@ appex.use(cors({
 }));
 
 global.__basedir = __dirname;
-// global.S3_URL = "https://159.223.251.167/assets/songs/";
-global.S3_URL = "https://159.223.251.167:3000/assets/songs/";
-// global.S3_URL = "http://159.223.251.167/assets/songs/";
+// global.S3_URL = "https://karakover.com/assets/songs/";
+global.S3_URL = "https://api.karakover.com/assets/songs/";
+// global.S3_URL = "http://karakover.com/assets/songs/";
 
 console.log(path.join(__dirname, 'public/assets/songs'), "path");
 
@@ -50,7 +50,7 @@ appex.get("/", (req, res) => {
   res.setHeader(
     "Access-Control-Allow-Origin",
     "*",
-    "https://159.223.251.167:3000",
+    "https://api.karakover.com",
     { reconnect: true }
   );
   res.setHeader("Access-Control-Allow-Credentials", true);
@@ -67,23 +67,23 @@ appex.get("/", (req, res) => {
   }
 });
 
-http
-  .createServer(
+// http
+//   .createServer(
 
-    // {
-    //   ca: fs.readFileSync("/var/www/html/ssl/ca_bundle.crt"),
-    //   key: fs.readFileSync("/var/www/html/ssl/private.key"),
-    //   cert: fs.readFileSync("/var/www/html/ssl/certificate.crt"),
-    // },
-    appex
-  )
-  .listen(3500, () => {
-    console.log("serever is runing at port 3500");
-  });
+//     // {
+//     //   ca: fs.readFileSync("/var/www/html/ssl/ca_bundle.crt"),
+//     //   key: fs.readFileSync("/var/www/html/ssl/private.key"),
+//     //   cert: fs.readFileSync("/var/www/html/ssl/certificate.crt"),
+//     // },
+//     appex
+//   )
+//   .listen(3500, () => {
+//     console.log("serever is runing at port 3500");
+//   });
 
 
 
-// appex.listen(3000, function () {
-//   console.log("Node appex is running on port 3000");
-// });
+appex.listen(3000, function () {
+  console.log("Node appex is running on port 3000");
+});
 module.exports = appex;

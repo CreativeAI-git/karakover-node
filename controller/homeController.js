@@ -1326,10 +1326,10 @@ exports.get_song = async (req, res) => {
         item.artist_name = artist_data.artist_name;
 
         item.artist_image = artist_data.image
-          ? `https://159.223.251.167/assets/artist/${artist_data.image}`
+          ? `https://karakover.com/assets/artist/${artist_data.image}`
           : "";
 
-        item.songUrl = `https://159.223.251.167:3000/assets/songs/${item.songs || song_data.track_no}`;
+        item.songUrl = `https://api.karakover.com/assets/songs/${item.songs || song_data.track_no}`;
         item.image = base_url + "karokeLogo.png";
 
         item.firstname = userdata[0]?.firstname;
@@ -1392,7 +1392,7 @@ exports.get_song = async (req, res) => {
 //             item.artist_name = artist_data.artist_name;
 //             item.song_name = song_data.track;
 //             item.artist_image = "";
-//             let base_artist_url = 'https://159.223.251.167/assets/artist/'
+//             let base_artist_url = 'https://karakover.com/assets/artist/'
 //             if (artist_data.image && !artist_data.image.startsWith('http')) {
 //               item.artist_image = base_artist_url + artist_data.image;
 //             }
@@ -1400,7 +1400,7 @@ exports.get_song = async (req, res) => {
 //             item.lastname = userdata[0]?.lastname;
 //             item.email = userdata[0]?.email;
 //             // item.image = userdata[0]?.image;
-//             let base_songs_url = 'https://159.223.251.167:3000/assets/songs/'
+//             let base_songs_url = 'https://api.karakover.com/assets/songs/'
 //             item.songUrl = base_songs_url + item.songs;
 //             item.image = base_url + "karokeLogo.png";
 //           })
@@ -1497,7 +1497,7 @@ exports.get_genre_data_api = async (req, res) => {
 
     genre_data.map((genre) => {
       if (genre.image && !genre.image.startsWith('http')) {
-        genre.image = 'https://159.223.251.167/assets/genre/' + genre.image
+        genre.image = 'https://karakover.com/assets/genre/' + genre.image
       }
     })
 
@@ -1539,7 +1539,7 @@ exports.get_instrument_data_api = async (req, res) => {
 
     instrument_data.map((instrument) => {
       if (instrument.image && !instrument.image.startsWith('http')) {
-        instrument.image = 'https://159.223.251.167/assets/instrument/' + instrument.image
+        instrument.image = 'https://karakover.com/assets/instrument/' + instrument.image
       }
     })
 
@@ -1885,7 +1885,7 @@ exports.get_songs_by_instrument = async (req, res) => {
 //         song.is_favorite = !!favorite_data;
 
 //         if (song.cover_image && !song.cover_image.startsWith('http')) {
-//           song.cover_image = `https://159.223.251.167/assets/cover/${song.cover_image}`;
+//           song.cover_image = `https://karakover.com/assets/cover/${song.cover_image}`;
 //         }
 
 //         return song;
