@@ -50,14 +50,26 @@ function betweenRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
+// gmail credentials for sending mail
+// var transporter = nodemailer.createTransport({
+//   // service: 'gmail',
+//   host: "smtp.gmail.com",
+//   port: 587,
+//   // secure: true,
+//   auth: {
+//     user: "karaokeapp23@gmail.com",
+//     pass: "itkfbulkhkrnbvrc",
+//   },
+// });
+
+// godaddy credentials for sending mail
 var transporter = nodemailer.createTransport({
-  // service: 'gmail',
-  host: "smtp.gmail.com",
+  host: "smtpout.secureserver.net",
   port: 587,
-  // secure: true,
+  secure: false,
   auth: {
-    user: "karaokeapp23@gmail.com",
-    pass: "itkfbulkhkrnbvrc",
+    user: "info@karakover.com",
+    pass: "NatRitYou1986$$",
   },
 });
 
@@ -88,10 +100,10 @@ exports.signup = async (req, res) => {
           "string.empty": "lastname can't be empty",
           "string.required": "lastname is required",
         }),
-        phone: [
-          Joi.number().empty().required(),
-          Joi.string().empty().required(),
-        ],
+        phone: Joi.string()
+          .pattern(/^[0-9]{7,15}$/)
+          .optional()
+          .allow('', null),
       })
     );
     const result = schema.validate(req.body);
@@ -125,7 +137,7 @@ exports.signup = async (req, res) => {
 
             if (result.affectedRows > 0) {
               let mailOptions = {
-                from: "karaokeapp23@gmail.com",
+                from: "info@karakover.com",
                 to: email,
                 subject: "Activate Account",
                 html: `<table width="100%" border=false cellspacing=false cellpadding=false>
@@ -486,7 +498,7 @@ exports.forgetPassword = async (req, res) => {
 
         let token = result[0].token;
         let mailOptions = {
-          from: "karaokeapp23@gmail.com",
+          from: "info@karakover.com",
           to: email,
           subject: "Forgot Password",
           html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;">
