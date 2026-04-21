@@ -3,6 +3,7 @@ const userController = require("../controller/userController");
 const adminuserController = require("../controller/adminuserController");
 const appController = require("../controller/appController");
 const homeController = require("../controller/homeController");
+const legalController = require("../controller/legalController");
 const auth = require("../middleware/auth");
 const upload = require("../middleware/upload");
 const uploadSong = require("../middleware/uploadSong");
@@ -46,6 +47,8 @@ router.post("/getSongsOfArtistByGenre", userController.getSongsOfArtistByGenre);
 router.post("/updatePassword", userController.updatePassword);
 router.get("/redirectToPP", appController.redirectToPP);
 router.get("/redirectTerms", appController.redirectTerms);
+router.get("/privacy-policy", legalController.getPrivacyPolicy);
+router.get("/terms-and-conditions", legalController.getTermsAndConditions);
 // ========================
 
 //============ 16-02-2023 === SHIKHA
