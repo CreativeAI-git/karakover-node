@@ -1,4 +1,4 @@
-const { fetchPrivacyPolicy, fetchTermAndCondition } = require("../models/home");
+const { fetchPrivacyPolicy, fetchTermAndCondition, fetchMixerStatus } = require("../models/home");
 
 exports.getPrivacyPolicy = async (req, res) => {
   try {
@@ -47,6 +47,26 @@ exports.getTermsAndConditions = async (req, res) => {
       status: 200,
       success: true,
       data: results[0],
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: "Internal server error",
+      status: 500,
+    });
+  }
+};
+
+exports.getMixerStatus = async (req, res) => {
+  try {
+    const results = await fetchMixerStatus();
+
+    return res.json({
+      message: "Fetch mixer status.",
+      status: 200,
+      data: results[0],
+      success: true,
     });
   } catch (error) {
     console.log(error);
