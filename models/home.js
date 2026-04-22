@@ -835,4 +835,8 @@ module.exports = {
   fetchTermAndCondition: async () => {
     return db.query("select * from tbl_terms_and_condition where id = 1");
   },
+
+  fetchMixerStatus: async () => {
+    return db.query("select * from tbl_mixer_status where id = 1");
+  },
 };
