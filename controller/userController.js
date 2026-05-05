@@ -26,7 +26,9 @@ const {
   insertIntoNotification,
   get_notification,
   update_fcm_token,
-  fetchPaymentByUserId
+  fetchPaymentByUserId,
+  fetchUserCreatedAtById,
+  fetchLatestPaidSubscriptionByUserId
 } = require("../models/users");
 
 const Joi = require("joi");
@@ -337,6 +339,73 @@ exports.login = async (req, res) => {
       status: 200,
       token: token,
       userinfo: user,
+    });
+  } catch (error) {
+    console.log(error, "<==error");
+    return res.json({
+      message: "Internal server error",
+      status: 500,
+      success: false,
+    });
+  }
+};
+
+exports.getSubscriptionStatus = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.json({
+        message: "User not found",
+        status: 400,
+        success: false,
+      });
+    }
+
+    const [userRow] = await fetchUserCreatedAtById(userId);
+    if (!userRow) {
+      return res.json({
+        message: "User not found",
+        status: 400,
+        success: false,
+      });
+    }
+
+    const [paidSub] = await fetchLatestPaidSubscriptionByUserId(userId);
+
+    const now = moment();
+
+    const isTrial = !paidSub;
+    const startDate = isTrial ? userRow.created_at : (paidSub.updated_at || paidSub.created_at);
+    const endDate = isTrial
+      ? moment(startDate).add(7, "days")
+      : moment(startDate).add(30, "days");
+
+    const isActive = now.isSameOrBefore(endDate);
+
+    const daysLeft = Math.max(0, endDate.diff(now, "days"));
+
+    return res.json({
+      message: "Subscription status fetched",
+      status: 200,
+      success: true,
+      data: {
+        user_id: userId,
+        is_trial: isTrial,
+        status: isActive ? "active" : "expired",
+        start_date: moment(startDate).format("YYYY-MM-DD HH:mm:ss"),
+        end_date: endDate.format("YYYY-MM-DD HH:mm:ss"),
+        days_left: daysLeft,
+        subscription: paidSub
+          ? {
+              id: paidSub.id,
+              instrument_selected: paidSub.instrument_selected,
+              amount: paidSub.amount,
+              payment_status: paidSub.payment_status,
+              created_at: paidSub.created_at,
+              updated_at: paidSub.updated_at,
+            }
+          : null,
+      },
     });
   } catch (error) {
     console.log(error, "<==error");

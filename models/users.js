@@ -4,6 +4,19 @@ module.exports = {
     return await db.query("insert into tbl_users set ?", [user]);
   },
 
+  fetchUserCreatedAtById: async (userId) => {
+    return db.query("select created_at from tbl_users where id = ? LIMIT 1", [
+      userId,
+    ]);
+  },
+
+  fetchLatestPaidSubscriptionByUserId: async (userId) => {
+    return db.query(
+      "SELECT id, user_id, instrument_selected, amount, payment_status, created_at, updated_at FROM user_subscription WHERE user_id = ? AND payment_status = 1 ORDER BY updated_at DESC, id DESC LIMIT 1",
+      [userId]
+    );
+  },
+
 fetchPaymentByUserId: async (userId) => {
   try {
     const rows = await db.query(
