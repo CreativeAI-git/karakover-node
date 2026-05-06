@@ -1344,10 +1344,20 @@ exports.pay_now = async (req, res) => {
         success: false,
       });
     } else {
+      const normalizedAmount =
+        amount === "" || amount === null || amount === undefined
+          ? 0
+          : Number(amount);
+      const isFreeTrial = Number.isFinite(normalizedAmount) && normalizedAmount === 0;
+
+      // If amount is 0, treat this as a successful free-trial activation.
+      // Trial duration logic is handled in `getSubscriptionStatus`.
+      const normalizedPaymentStatus = isFreeTrial ? 1 : payment_status;
+
       let data = {
-        amount: amount,
+        amount: Number.isFinite(normalizedAmount) ? normalizedAmount : amount,
         updated_at: CurrentDate,
-        payment_status: payment_status,
+        payment_status: normalizedPaymentStatus,
       };
 
       let result1 = await updateSubscription(data, id, user_id);
@@ -1355,7 +1365,7 @@ exports.pay_now = async (req, res) => {
 
       if (result1.affectedRows) {
         let data1 = {
-          payment_status: payment_status,
+          payment_status: normalizedPaymentStatus,
         };
 
         let updateId = await updateUserById(data1, user_id);

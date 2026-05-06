@@ -374,8 +374,17 @@ exports.getSubscriptionStatus = async (req, res) => {
 
     const now = moment();
 
-    const isTrial = !paidSub;
-    const startDate = isTrial ? userRow.created_at : (paidSub.updated_at || paidSub.created_at);
+    const paidAmount = paidSub ? Number(paidSub.amount) : null;
+
+    // Trial rules:
+    // - If user has no successful payment record => 7-day trial from signup
+    // - If latest successful payment is amount 0 => 7-day free trial from that payment time
+    const isTrial = !paidSub || (Number.isFinite(paidAmount) && paidAmount === 0);
+    const startDate = isTrial
+      ? paidSub
+        ? (paidSub.updated_at || paidSub.created_at)
+        : userRow.created_at
+      : (paidSub.updated_at || paidSub.created_at);
     const endDate = isTrial
       ? moment(startDate).add(7, "days")
       : moment(startDate).add(30, "days");
