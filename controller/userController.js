@@ -42,6 +42,7 @@ const path = require("path");
 var crypto = require("crypto");
 var base64url = require("base64url");
 const localStorage = require("localStorage");
+const { fetchPromoStatus } = require("../models/home");
 
 /** Sync */
 function randomStringAsBase64Url(size) {
@@ -65,14 +66,29 @@ function betweenRandomNumber(min, max) {
 // });
 
 // godaddy credentials for sending mail
-var transporter = nodemailer.createTransport({
-  host: "smtpout.secureserver.net",
+const smtpUser = "info@karakover.com";
+const smtpPass = "NatRitYou1986$";
+
+// var transporter = nodemailer.createTransport({
+//   host: "smtpout.secureserver.net",
+//   port: 587,
+//   secure: false,
+//   auth: {
+//     user: smtpUser,
+//     pass: smtpPass,
+//   },
+// });
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.office365.com",
   port: 587,
   secure: false,
   auth: {
-    user: "info@karakover.com",
-    pass: "NatRitYou1986$$",
+    user: smtpUser,
+    pass: smtpPass,
   },
+  logger: true,
+  debug: true,
 });
 
 exports.signup = async (req, res) => {
@@ -139,7 +155,7 @@ exports.signup = async (req, res) => {
 
             if (result.affectedRows > 0) {
               let mailOptions = {
-                from: "info@karakover.com",
+                from: smtpUser,
                 to: email,
                 subject: "Activate Account",
                 html: `<table width="100%" border=false cellspacing=false cellpadding=false>
@@ -156,8 +172,12 @@ exports.signup = async (req, res) => {
                              </table>`,
               };
 
+              console.log("Signup SMTP user:", smtpUser);
+              console.log("Signup SMTP pass:", smtpPass);
+
               transporter.sendMail(mailOptions, async function (error, info) {
                 if (error) {
+                  console.error("Signup mail error:", error);
                   return res.json({
                     success: false,
                     message: "Mail Not delivered",
@@ -1260,6 +1280,26 @@ exports.Allnotification = async (req, res) => {
       message: "An internal server error occurred. Please try again later.",
       status: 500,
       error: error,
+    });
+  }
+};
+
+exports.getPromoStatus = async (req, res) => {
+  try {
+    const results = await fetchPromoStatus();
+
+    return res.json({
+      message: "Fetch promo status.",
+      status: 200,
+      data: results[0],
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: "Internal server error",
+      status: 500,
     });
   }
 };
