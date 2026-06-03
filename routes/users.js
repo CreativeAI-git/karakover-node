@@ -51,6 +51,7 @@ router.get("/redirectTerms", appController.redirectTerms);
 router.get("/privacy-policy", legalController.getPrivacyPolicy);
 router.get("/terms-and-conditions", legalController.getTermsAndConditions);
 router.get("/mixer-status", legalController.getMixerStatus);
+router.get("/get-promo-status", userController.getPromoStatus);
 // ========================
 
 //============ 16-02-2023 === SHIKHA

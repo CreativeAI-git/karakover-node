@@ -839,4 +839,8 @@ module.exports = {
   fetchMixerStatus: async () => {
     return db.query("select * from tbl_mixer_status where id = 1");
   },
+
+  fetchPromoStatus: async () => {
+    return db.query("select * from tbl_promo_status where id = 1");
+  },
 };
