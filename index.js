@@ -1,3 +1,5 @@
+require("./utils/env");
+
 const express = require("express");
 const cors = require("cors");
 const user = require("./routes/users");
@@ -7,32 +9,48 @@ const appex = express();
 const http = require("http");
 const https = require("https");
 const fs = require("fs");
+const port = process.env.PORT || 3000;
+const songsPath = process.env.SONGS_PATH || path.join(__dirname, "public/assets/songs");
+const serverSongsPath = process.env.SERVER_SONGS_PATH;
+
 appex.use(cors());
 
-appex.use(cors({
-  origin: '*', // Allow all origins (update this to specific origins if needed)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Custom-Header']
-}));
+appex.use(
+  cors({
+    origin: "*", // Allow all origins (update this to specific origins if needed)
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Custom-Header"],
+  })
+);
 
 global.__basedir = __dirname;
 // global.S3_URL = "https://karakover.com/assets/songs/";
-global.S3_URL = "https://api.karakover.com/assets/songs/";
+global.S3_URL = process.env.S3_URL || "https://api.karakover.com/assets/songs/";
 // global.S3_URL = "http://karakover.com/assets/songs/";
 
-console.log(path.join(__dirname, 'public/assets/songs'), "path");
+console.log(songsPath, "songs path");
 
-appex.use('/assets/songs', express.static(path.join(__dirname, 'public/assets/songs'), {
-  setHeaders: (res, path) => {
-    res.set('Access-Control-Allow-Origin', '*');
-  }
-}));
+appex.use(
+  "/assets/songs",
+  express.static(songsPath, {
+    setHeaders: (res) => {
+      res.set("Access-Control-Allow-Origin", "*");
+    },
+  })
+);
 
-appex.use('/assets/songs', express.static('/var/www/html/assets/songs', {
-  setHeaders: (res, path) => {
-    res.set('Access-Control-Allow-Origin', '*');
-  }
-}));
+if (serverSongsPath) {
+  console.log(serverSongsPath, "server songs path");
+
+  appex.use(
+    "/assets/songs",
+    express.static(serverSongsPath, {
+      setHeaders: (res) => {
+        res.set("Access-Control-Allow-Origin", "*");
+      },
+    })
+  );
+}
 
 
 
@@ -83,7 +101,7 @@ appex.get("/", (req, res) => {
 
 
 
-appex.listen(3000, function () {
-  console.log("Node appex is running on port 3000");
+appex.listen(port, function () {
+  console.log(`Node App is running on port ${port}`);
 });
 module.exports = appex;

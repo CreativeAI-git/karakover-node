@@ -1,3 +1,5 @@
+require("./utils/env");
+
 module.exports = {
-  base_url: "https://api.karakover.com",
+  base_url: process.env.APP_URL || "https://api.karakover.com",
 };

@@ -1,3 +1,5 @@
+require("../utils/env");
+
 const {
   addUser,
   fetchUserByEmail,
@@ -44,6 +46,13 @@ var base64url = require("base64url");
 const localStorage = require("localStorage");
 const { fetchPromoStatus } = require("../models/home");
 
+const appUrl = (process.env.APP_URL || "https://api.karakover.com").replace(/\/$/, "");
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASS || "";
+const mailFrom = process.env.MAIL_FROM || smtpUser;
+const jwtSecret = process.env.JWT_SECRET;
+const mailDebug = process.env.MAIL_DEBUG === "true";
+
 /** Sync */
 function randomStringAsBase64Url(size) {
   return base64url(crypto.randomBytes(size));
@@ -65,10 +74,6 @@ function betweenRandomNumber(min, max) {
 //   },
 // });
 
-// godaddy credentials for sending mail
-const smtpUser = "info@karakover.com";
-const smtpPass = "NatRitYou1986$";
-
 // var transporter = nodemailer.createTransport({
 //   host: "smtpout.secureserver.net",
 //   port: 587,
@@ -80,15 +85,15 @@ const smtpPass = "NatRitYou1986$";
 // });
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.office365.com",
-  port: 587,
-  secure: false,
+  host: process.env.SMTP_HOST || "smtp.office365.com",
+  port: Number(process.env.SMTP_PORT || 587),
+  secure: process.env.SMTP_SECURE === "true",
   auth: {
     user: smtpUser,
     pass: smtpPass,
   },
-  logger: true,
-  debug: true,
+  logger: mailDebug,
+  debug: mailDebug,
 });
 
 exports.signup = async (req, res) => {
@@ -155,7 +160,7 @@ exports.signup = async (req, res) => {
 
             if (result.affectedRows > 0) {
               let mailOptions = {
-                from: smtpUser,
+                from: mailFrom,
                 to: email,
                 subject: "Activate Account",
                 html: `<table width="100%" border=false cellspacing=false cellpadding=false>
@@ -165,7 +170,7 @@ exports.signup = async (req, res) => {
                                          <div align="center"></div>
                                          <p></p>
                                          <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
-                                         <p style="color:#333"> Please <a href="https://api.karakover.com/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
+                                         <p style="color:#333"> Please <a href="${appUrl}/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
                                       </center>
                                    </td>
                                 </tr>
@@ -173,7 +178,6 @@ exports.signup = async (req, res) => {
               };
 
               console.log("Signup SMTP user:", smtpUser);
-              console.log("Signup SMTP pass:", smtpPass);
 
               transporter.sendMail(mailOptions, async function (error, info) {
                 if (error) {
@@ -188,7 +192,7 @@ exports.signup = async (req, res) => {
                   //fetch user details
                   if (result[0]["image"] != "") {
                     profileImage =
-                      "https://api.karakover.com/uploads/" +
+                      `${appUrl}/uploads/` +
                       result[0]["image"];
                     // "https://api.karakover.com/uploads/" +
                     // result[0]["image"];
@@ -331,7 +335,7 @@ exports.login = async (req, res) => {
     // JWT token
     const token = jwt.sign(
       { data: { id: user.id } },
-      "SecretKey"
+      jwtSecret
     );
 
     // Update FCM token
@@ -340,7 +344,7 @@ exports.login = async (req, res) => {
     // Profile image
     let profileImage = "";
     if (user.image && user.image !== "") {
-      profileImage = "https://api.karakover.com/uploads/" + user.image;
+      profileImage = `${appUrl}/uploads/` + user.image;
     }
     user.image = profileImage;
 
@@ -399,15 +403,20 @@ exports.getSubscriptionStatus = async (req, res) => {
     // Trial rules:
     // - If user has no successful payment record => 7-day trial from signup
     // - If latest successful payment is amount 0 => 7-day free trial from that payment time
-    const isTrial = !paidSub || (Number.isFinite(paidAmount) && paidAmount === 0);
-    const startDate = isTrial
-      ? paidSub
-        ? (paidSub.updated_at || paidSub.created_at)
-        : userRow.created_at
-      : (paidSub.updated_at || paidSub.created_at);
-    const endDate = isTrial
-      ? moment(startDate).add(7, "days")
-      : moment(startDate).add(30, "days");
+    const isTrial =
+      !paidSub ||
+      paidSub.subscription_name === "trial" ||
+      (Number.isFinite(paidAmount) && paidAmount === 0);
+    const savedStartDate = paidSub?.subscription_start_date;
+    const savedEndDate = paidSub?.subscription_end_date;
+    const startDate = savedStartDate || (paidSub
+      ? (paidSub.updated_at || paidSub.created_at)
+      : userRow.created_at);
+    const endDate = savedEndDate
+      ? moment(savedEndDate)
+      : isTrial
+        ? moment(startDate).add(7, "days")
+        : moment(startDate).add(30, "days");
 
     const isActive = now.isSameOrBefore(endDate);
 
@@ -430,6 +439,10 @@ exports.getSubscriptionStatus = async (req, res) => {
               instrument_selected: paidSub.instrument_selected,
               amount: paidSub.amount,
               payment_status: paidSub.payment_status,
+              subscription_name: paidSub.subscription_name,
+              subscription_start_date: paidSub.subscription_start_date,
+              subscription_end_date: paidSub.subscription_end_date,
+              subscription_days: paidSub.subscription_days,
               created_at: paidSub.created_at,
               updated_at: paidSub.updated_at,
             }
@@ -596,7 +609,7 @@ exports.forgetPassword = async (req, res) => {
 
         let token = result[0].token;
         let mailOptions = {
-          from: "info@karakover.com",
+          from: mailFrom,
           to: email,
           subject: "Forgot Password",
           html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;">
@@ -612,7 +625,7 @@ exports.forgetPassword = async (req, res) => {
         <tr>
           <td align="center" style="padding:50px 20px 10px;">
  
-            <img src="https://api.karakover.com/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
+            <img src="${appUrl}/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
             <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
                        font-size:20px;color:#fff;">
               Reset Your Password
@@ -633,7 +646,7 @@ exports.forgetPassword = async (req, res) => {
         <!-- Button -->
         <tr>
           <td align="center" style="padding:20px 20px 50px;">
-            <a href="https://api.karakover.com/verifyPassword/${token}"
+            <a href="${appUrl}/verifyPassword/${token}"
                style="display:inline-block;
                       padding:14px 28px;
                       background:#0D8EC5;
@@ -780,7 +793,7 @@ exports.userProfile = async (req, res) => {
           profileImage = "";
         } else {
           profileImage =
-            "https://api.karakover.com/uploads/" + results[0]["image"];
+            `${appUrl}/uploads/` + results[0]["image"];
           // "https://api.karakover.com/uploads/" + result[0]["image"];
         }
 
@@ -851,7 +864,7 @@ exports.sociallogin = async (req, res) => {
               id: result[0].id,
             },
           },
-          "SecretKey"
+          jwtSecret
         );
         return res.json({
           success: true,
@@ -867,7 +880,7 @@ exports.sociallogin = async (req, res) => {
               id: usersemail[0].id,
             },
           },
-          "SecretKey"
+          jwtSecret
         );
         return res.json({
           success: true,
@@ -887,7 +900,7 @@ exports.sociallogin = async (req, res) => {
                 id: result2.insertId,
               },
             },
-            "SecretKey"
+            jwtSecret
           );
 
           return res.json({
@@ -945,7 +958,7 @@ exports.verifyhomeUser = async (req, res) => {
               id: result[0].id,
             },
           },
-          "SecretKey"
+          jwtSecret
         );
 
         const resultUpdate = await updateVerifyUser(data, result[0].id);

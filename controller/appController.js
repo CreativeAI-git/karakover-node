@@ -343,9 +343,9 @@ const {
   getAllDataInstrument,
   fetchInsById,
   updateInstrumentSelect,
+  insertSubscriptionHistory,
   fetchSongsById,
   fetchevoriateSong,
-  updateSubscription,
   fetchSongsByCategory, fetchSongsByImage,
   fetch_last_songs,
   fetchevoriateSongUser,
@@ -1322,7 +1322,7 @@ exports.getSongsByCategory = async (req, res) => {
 exports.pay_now = async (req, res) => {
   try {
     var CurrentDate = moment().format();
-    const { user_id, id, payment_status, amount } = req.body;
+    const { user_id, id, payment_status, amount, subscription_days } = req.body;
 
     const schema = Joi.alternatives(
       Joi.object({
@@ -1330,6 +1330,8 @@ exports.pay_now = async (req, res) => {
         id: [Joi.number().empty(), Joi.string().empty()],
         payment_status: [Joi.number().empty(), Joi.string().empty()],
         amount: [Joi.number().empty(), Joi.string().empty()],
+        subscription_name: [Joi.string().lowercase().valid("monthly", "yearly", "trial").empty()],
+        subscription_days: [Joi.number().empty(), Joi.string().empty()],
       })
     );
     const result = schema.validate(req.body);
@@ -1353,14 +1355,41 @@ exports.pay_now = async (req, res) => {
       // If amount is 0, treat this as a successful free-trial activation.
       // Trial duration logic is handled in `getSubscriptionStatus`.
       const normalizedPaymentStatus = isFreeTrial ? 1 : payment_status;
+      const normalizedSubscriptionName = isFreeTrial
+        ? "trial"
+        : result.value.subscription_name || "monthly";
+      const normalizedSubscriptionDays =
+        subscription_days === "" || subscription_days === null || subscription_days === undefined
+          ? isFreeTrial
+            ? 7
+            : normalizedSubscriptionName === "yearly"
+              ? 365
+              : 30
+          : Number(subscription_days);
+      const subscriptionDays = Number.isFinite(normalizedSubscriptionDays)
+        ? normalizedSubscriptionDays
+        : 30;
+      const subscriptionStartDate = moment();
+      const subscriptionEndDate = moment(subscriptionStartDate).add(subscriptionDays, "days");
+      const selectedSubscription = id
+        ? await getinstrumentSelected(id)
+        : await getinstrumentByUserid(user_id);
+      const instrumentSelected = selectedSubscription[0]?.instrument_selected || 5;
 
       let data = {
+        user_id,
+        instrument_selected: instrumentSelected,
         amount: Number.isFinite(normalizedAmount) ? normalizedAmount : amount,
+        subscription_name: normalizedSubscriptionName,
+        subscription_start_date: subscriptionStartDate.format("YYYY-MM-DD HH:mm:ss"),
+        subscription_end_date: subscriptionEndDate.format("YYYY-MM-DD HH:mm:ss"),
+        subscription_days: subscriptionDays,
+        created_at: CurrentDate,
         updated_at: CurrentDate,
         payment_status: normalizedPaymentStatus,
       };
 
-      let result1 = await updateSubscription(data, id, user_id);
+      let result1 = await insertSubscriptionHistory(data);
       console.log('result1', result1);
 
       if (result1.affectedRows) {

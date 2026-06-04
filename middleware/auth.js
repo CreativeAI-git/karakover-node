@@ -1,21 +1,27 @@
+require("../utils/env");
+
 const jwt = require("jsonwebtoken");
 const { fetchUserById } = require("../models/users");
+const jwtSecret = process.env.JWT_SECRET;
 // const key = require("../config/key");
 const auth = async (req, res, next) => {
   try {
     const bearerHeader = req.headers["authorization"];
 
-    if (typeof beareHeader != undefined) {
+    if (bearerHeader) {
       const bearer = bearerHeader.split(" ");
-      console.log(bearer , "bbb");
-      
-      req.token = bearer[1];
-      const verifyUser = jwt.verify(req.token, 'SecretKey')
-      console.log(verifyUser, "<====verify user")
-      const [user] = await fetchUserById(verifyUser.data.id);
-      console.log(user, "user");
 
-      console.log(user, "user data");
+      if (bearer[0] !== "Bearer" || !bearer[1]) {
+        return res.json({
+          message: "Token Not Provided",
+          status: 400,
+          success: "0",
+        });
+      }
+
+      req.token = bearer[1];
+      const verifyUser = jwt.verify(req.token, jwtSecret)
+      const [user] = await fetchUserById(verifyUser.data.id);
 
       if (user !== null) {
         req.user = user

@@ -745,7 +745,8 @@ module.exports = {
 
   user_subscription_data: async (user_id) => {
     return await db.query(
-      `SELECT * FROM  user_subscription  where user_id = '${user_id}'`
+      `SELECT * FROM user_subscription where user_id = ? ORDER BY id DESC LIMIT 1`,
+      [user_id]
     );
   },
 
