@@ -1,11 +1,13 @@
+require("./env");
+
 const mysql = require('mysql2');
 const util = require('util');
 var db_config = {
-    host: 'localhost',
-    user: 'root',
-    password: 'BE&8mA@95Onp',
-    port:'3306',
-    database: 'karakover-admin'
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    port: process.env.DB_PORT || '3306',
+    database: process.env.DB_NAME || 'karakover-admin'
 };
 
 var connection;

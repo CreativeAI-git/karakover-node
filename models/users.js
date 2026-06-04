@@ -12,7 +12,7 @@ module.exports = {
 
   fetchLatestPaidSubscriptionByUserId: async (userId) => {
     return db.query(
-      "SELECT id, user_id, instrument_selected, amount, payment_status, created_at, updated_at FROM user_subscription WHERE user_id = ? AND payment_status = 1 ORDER BY updated_at DESC, id DESC LIMIT 1",
+      "SELECT id, user_id, instrument_selected, amount, payment_status, subscription_name, subscription_start_date, subscription_end_date, subscription_days, created_at, updated_at FROM user_subscription WHERE user_id = ? AND payment_status = 1 ORDER BY subscription_start_date DESC, updated_at DESC, id DESC LIMIT 1",
       [userId]
     );
   },
@@ -92,7 +92,7 @@ fetchPaymentByUserId: async (userId) => {
 
   fetchInstrumentUserid: async (id) => {
     return db.query(
-      "select instrument_selected from user_subscription where user_id = ?",
+      "select instrument_selected from user_subscription where user_id = ? ORDER BY id DESC LIMIT 1",
       [id]
     );
   },

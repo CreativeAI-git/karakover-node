@@ -1,5 +1,5 @@
 const Joi = require('joi');
-require("dotenv").config();
+require("../../utils/env");
 const ejs = require("ejs");
 const path = require("path");
 const bcrypt = require('bcrypt');

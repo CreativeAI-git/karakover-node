@@ -15,8 +15,12 @@ module.exports = {
     return db.query("insert into user_subscription set ?", [data]);
   },
 
+  insertSubscriptionHistory: async (data) => {
+    return db.query("insert into user_subscription set ?", [data]);
+  },
+
   updateInstrumentSelect: async (data, user_id) => {
-    return db.query("update user_subscription set ? where user_id = ?", [
+    return db.query("update user_subscription set ? where user_id = ? ORDER BY id DESC LIMIT 1", [
       data,
       user_id,
     ]);
@@ -44,7 +48,7 @@ module.exports = {
 
   getinstrumentByUserid: async (user_id) => {
     return db.query(
-      `select id,	user_id, instrument_selected from user_subscription where user_id = ? `,
+      `select id,	user_id, instrument_selected from user_subscription where user_id = ? ORDER BY id DESC `,
       [user_id]
     );
   },
