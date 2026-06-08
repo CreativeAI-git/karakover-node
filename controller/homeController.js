@@ -314,17 +314,113 @@ const formatResponse = (list = []) => {
 //   }
 // };
 
+// exports.homePagePaylistsearch = async (req, res) => {
+//   try {
+//     const { user_id } = req.body;
+//     const { search } = req.query; // GET request ke liye query params
+
+//     // ===== VALIDATION =====
+//     const schema = Joi.object({
+//       user_id: Joi.number().required(),
+//       search: Joi.string().allow("", null),
+//     });
+//     const { error } = schema.validate({ user_id, search });
+//     if (error) {
+//       return res.json({
+//         message: error.details[0].message,
+//         error: error.details.map(i => i.message).join(","),
+//         missingParams: error.details[0].message,
+//         status: 400,
+//         success: false,
+//       });
+//     }
+
+//     // ===== USER SUBSCRIPTION =====
+//     const [user_subscription] = await user_subscription_data(user_id);
+//     const instrumentSelected = user_subscription?.instrument_selected || 5;
+
+//     // ===== FETCH SONGS =====
+//     let songs = await getyourMoods(instrumentSelected);
+
+//     // ===== PROCESS SONGS =====
+//     await Promise.all(
+//       songs.map(async item => {
+//         const [fav] = await get_favorite_data(user_id, item.id);
+//         item.is_favorite = !!fav;
+
+//         if (item.instrument_id) {
+//           const [inst] = await get_instrument_data_by_instrument_id(item.instrument_id);
+//           item.instrument_data = inst || null;
+//         }
+
+//         const [artist] = await get_artist_data_artist_id(item.artist);
+//         if (artist) item.artist_name = artist.artist_name;
+
+//         if (item.cover_image) item.cover_image = baseurl_cover + item.cover_image;
+//         if (item.solo) item.solo = baseurl_songs + item.solo;
+//         if (item.click_bpm) item.click_bpm = baseurl_songs + item.click_bpm;
+//         if (item.master1) item.master1 = baseurl_songs + item.master1;
+
+//         // instrument specific tracks
+//         item.drums = item.drums && (instrumentSelected == 5 || instrumentSelected == 3) ? baseurl_songs + item.drums : '';
+//         item.guitar = item.guitar && (instrumentSelected == 5 || instrumentSelected == 1) ? baseurl_songs + item.guitar : '';
+//         item.bass = item.bass && (instrumentSelected == 5 || instrumentSelected == 2) ? baseurl_songs + item.bass : '';
+//         item.keyboards = item.keyboards && (instrumentSelected == 5 || instrumentSelected == 4) ? baseurl_songs + item.keyboards : '';
+//       })
+//     );
+
+//     // ===== SEARCH FILTER =====
+//     if (search && search.trim() !== "") {
+//       const keyword = search.toLowerCase();
+//       songs = songs.filter(item =>
+//         item.track?.toLowerCase().includes(keyword) ||
+//         item.label?.toLowerCase().includes(keyword) ||
+//         item.artist_name?.toLowerCase().includes(keyword) ||
+//         item.lyrics?.toLowerCase().includes(keyword)
+//       );
+//     }
+
+//     // ===== GROUP BY DIFFICULTY =====
+//     const easy = songs.filter(s => s.category?.toLowerCase() === "easy");
+//     const medium = songs.filter(s => s.category?.toLowerCase() === "medium");
+//     const high = songs.filter(s => s.category?.toLowerCase() === "high");
+
+//     // ===== RESPONSE =====
+//     return res.json({
+//       message: "Home data fetched successfully",
+//       status: 200,
+//       success: true,
+//       data: {
+//         easy,
+//         medium,
+//         high,
+//       },
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     return res.json({
+//       success: false,
+//       message: "Internal server error",
+//       status: 500,
+//     });
+//   }
+// };
+
+
 exports.homePagePaylistsearch = async (req, res) => {
   try {
     const { user_id } = req.body;
-    const { search } = req.query; // GET request ke liye query params
+    const { search } = req.query;
 
     // ===== VALIDATION =====
     const schema = Joi.object({
       user_id: Joi.number().required(),
       search: Joi.string().allow("", null),
     });
+
     const { error } = schema.validate({ user_id, search });
+
     if (error) {
       return res.json({
         message: error.details[0].message,
@@ -339,8 +435,26 @@ exports.homePagePaylistsearch = async (req, res) => {
     const [user_subscription] = await user_subscription_data(user_id);
     const instrumentSelected = user_subscription?.instrument_selected || 5;
 
+    const subscriptionName = (
+      user_subscription?.subscription_name || ""
+    ).toLowerCase();
+
+    const subscriptionAmount = Number(user_subscription?.amount);
+
+    const isTrialSubscription =
+      subscriptionName === "trial" ||
+      (Number.isFinite(subscriptionAmount) &&
+        subscriptionAmount === 0);
+
     // ===== FETCH SONGS =====
     let songs = await getyourMoods(instrumentSelected);
+
+    // Trial users can only access free songs
+    if (isTrialSubscription) {
+      songs = songs.filter(
+        song => Number(song.is_free_song) === 1
+      );
+    }
 
     // ===== PROCESS SONGS =====
     await Promise.all(
@@ -349,43 +463,79 @@ exports.homePagePaylistsearch = async (req, res) => {
         item.is_favorite = !!fav;
 
         if (item.instrument_id) {
-          const [inst] = await get_instrument_data_by_instrument_id(item.instrument_id);
+          const [inst] = await get_instrument_data_by_instrument_id(
+            item.instrument_id
+          );
           item.instrument_data = inst || null;
         }
 
         const [artist] = await get_artist_data_artist_id(item.artist);
         if (artist) item.artist_name = artist.artist_name;
 
-        if (item.cover_image) item.cover_image = baseurl_cover + item.cover_image;
-        if (item.solo) item.solo = baseurl_songs + item.solo;
-        if (item.click_bpm) item.click_bpm = baseurl_songs + item.click_bpm;
-        if (item.master1) item.master1 = baseurl_songs + item.master1;
+        if (item.cover_image)
+          item.cover_image = baseurl_cover + item.cover_image;
 
-        // instrument specific tracks
-        item.drums = item.drums && (instrumentSelected == 5 || instrumentSelected == 3) ? baseurl_songs + item.drums : '';
-        item.guitar = item.guitar && (instrumentSelected == 5 || instrumentSelected == 1) ? baseurl_songs + item.guitar : '';
-        item.bass = item.bass && (instrumentSelected == 5 || instrumentSelected == 2) ? baseurl_songs + item.bass : '';
-        item.keyboards = item.keyboards && (instrumentSelected == 5 || instrumentSelected == 4) ? baseurl_songs + item.keyboards : '';
+        if (item.solo)
+          item.solo = baseurl_songs + item.solo;
+
+        if (item.click_bpm)
+          item.click_bpm = baseurl_songs + item.click_bpm;
+
+        if (item.master1)
+          item.master1 = baseurl_songs + item.master1;
+
+        item.drums =
+          item.drums &&
+            (instrumentSelected == 5 || instrumentSelected == 3)
+            ? baseurl_songs + item.drums
+            : "";
+
+        item.guitar =
+          item.guitar &&
+            (instrumentSelected == 5 || instrumentSelected == 1)
+            ? baseurl_songs + item.guitar
+            : "";
+
+        item.bass =
+          item.bass &&
+            (instrumentSelected == 5 || instrumentSelected == 2)
+            ? baseurl_songs + item.bass
+            : "";
+
+        item.keyboards =
+          item.keyboards &&
+            (instrumentSelected == 5 || instrumentSelected == 4)
+            ? baseurl_songs + item.keyboards
+            : "";
       })
     );
 
     // ===== SEARCH FILTER =====
     if (search && search.trim() !== "") {
       const keyword = search.toLowerCase();
-      songs = songs.filter(item =>
-        item.track?.toLowerCase().includes(keyword) ||
-        item.label?.toLowerCase().includes(keyword) ||
-        item.artist_name?.toLowerCase().includes(keyword) ||
-        item.lyrics?.toLowerCase().includes(keyword)
+
+      songs = songs.filter(
+        item =>
+          item.track?.toLowerCase().includes(keyword) ||
+          item.label?.toLowerCase().includes(keyword) ||
+          item.artist_name?.toLowerCase().includes(keyword) ||
+          item.lyrics?.toLowerCase().includes(keyword)
       );
     }
 
     // ===== GROUP BY DIFFICULTY =====
-    const easy = songs.filter(s => s.category?.toLowerCase() === "easy");
-    const medium = songs.filter(s => s.category?.toLowerCase() === "medium");
-    const high = songs.filter(s => s.category?.toLowerCase() === "high");
+    const easy = songs.filter(
+      s => s.category?.toLowerCase() === "easy"
+    );
 
-    // ===== RESPONSE =====
+    const medium = songs.filter(
+      s => s.category?.toLowerCase() === "medium"
+    );
+
+    const high = songs.filter(
+      s => s.category?.toLowerCase() === "high"
+    );
+
     return res.json({
       message: "Home data fetched successfully",
       status: 200,
@@ -406,9 +556,6 @@ exports.homePagePaylistsearch = async (req, res) => {
     });
   }
 };
-
-
-
 
 
 // exports.homePagePaylist = async (req, res) => {
@@ -543,6 +690,134 @@ exports.homePagePaylistsearch = async (req, res) => {
 //   }
 // };
 
+// exports.homePagePaylist = async (req, res) => {
+//   try {
+//     const { user_id } = req.body;
+
+//     // ===== VALIDATION =====
+//     const schema = Joi.object({
+//       user_id: Joi.number().required(),
+//     });
+//     const result = schema.validate(req.body);
+//     if (result.error) {
+//       return res.json({
+//         message: result.error.details[0].message,
+//         error: result.error.details.map(i => i.message).join(","),
+//         missingParams: result.error.details[0].message,
+//         status: 400,
+//         success: false,
+//       });
+//     }
+
+//     // ===== USER INSTRUMENT =====
+//     let [user_subscription] = await user_subscription_data(user_id);
+//     const instrumentSelected = user_subscription?.instrument_selected;
+//     const subscriptionName = (user_subscription?.subscription_name || "").toLowerCase();
+//     const subscriptionAmount = Number(user_subscription?.amount);
+//     const subscriptionEndDate = user_subscription?.subscription_end_date
+//       ? new Date(user_subscription.subscription_end_date)
+//       : null;
+//     const isSubscriptionActive =
+//       !subscriptionEndDate ||
+//       Number.isNaN(subscriptionEndDate.getTime()) ||
+//       subscriptionEndDate >= new Date();
+//     const isTrialSubscription =
+//       user_subscription &&
+//       Number(user_subscription.payment_status) === 1 &&
+//       isSubscriptionActive &&
+//       (subscriptionName === "trial" ||
+//         (Number.isFinite(subscriptionAmount) && subscriptionAmount === 0));
+
+//     console.log("Subscription Data:", user_subscription);
+//     console.log("isTrialSubscription:", isTrialSubscription);
+//     // ===== FETCH ALL SONGS FOR THIS INSTRUMENT =====
+//     let allSongs = await getAllSongsByInstrument(instrumentSelected, isTrialSubscription);
+
+//     // Only keep songs for this instrument (or full access)
+//     allSongs = allSongs.filter(song => song.instrument_id == instrumentSelected || instrumentSelected == 5);
+
+//     // ===== REMOVE DUPLICATES =====
+//     const usedSongIds = new Set();
+//     allSongs = allSongs.filter(song => {
+//       if (usedSongIds.has(song.id)) return false;
+//       usedSongIds.add(song.id);
+//       return true;
+//     });
+
+//     // ===== USER INSTRUMENT DETAILS =====
+//     let fetchInstId = await getinstrumentByUserid(user_id);
+
+//     // ===== PROCESS SONGS =====
+//     const processSong = async (item) => {
+//       const [favorite_data] = await get_favorite_data(user_id, item.id);
+//       item.is_favorite = !!favorite_data;
+
+//       if (item.instrument_id) {
+//         const [instrument_data] = await get_instrument_data_by_instrument_id(item.instrument_id);
+//         item.instrument_data = instrument_data || null;
+//       }
+
+//       const [artist_data] = await get_artist_data_artist_id(item.artist);
+//       item.artist_name = artist_data?.artist_name || null;
+
+//       if (item.cover_image) item.cover_image = baseurl_cover + item.cover_image;
+//       if (item.solo) item.solo = baseurl_songs + item.solo;
+//       if (item.click_bpm) item.click_bpm = baseurl_songs + item.click_bpm;
+
+//       // instrument-specific tracks
+//       item.drums =
+//         item.drums && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 3)
+//           ? baseurl_songs + item.drums : '';
+//       item.guitar =
+//         item.guitar && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 1)
+//           ? baseurl_songs + item.guitar : '';
+//       item.bass =
+//         item.bass && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 2)
+//           ? baseurl_songs + item.bass : '';
+//       item.keyboards =
+//         item.keyboards && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 4)
+//           ? baseurl_songs + item.keyboards : '';
+//       if (!item.master1 && item.master_song) {
+//         item.master1 = item.master_song;
+//       }
+//       item.master1 = item.master1 ? baseurl_songs + item.master1 : '';
+
+//     };
+
+//     await Promise.all(allSongs.map(processSong));
+
+//     // ===== GROUP BY STATIC CATEGORIES =====
+//     const homeData = {
+//       easy: [],
+//       medium: [],
+//       high: []
+//     };
+
+//     allSongs.forEach(song => {
+//       const category = song.category?.toLowerCase();
+//       if (category && homeData[category]) {
+//         homeData[category].push(song);
+//       }
+//     });
+
+//     // ===== RESPONSE =====
+//     return res.json({
+//       message: "Home data fetched successfully",
+//       status: 200,
+//       success: true,
+//       data: homeData, // always has keys: easy, medium, high
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     return res.json({
+//       success: false,
+//       message: "Internal server error",
+//       status: 500,
+//     });
+//   }
+// };
+
 exports.homePagePaylist = async (req, res) => {
   try {
     const { user_id } = req.body;
@@ -562,21 +837,48 @@ exports.homePagePaylist = async (req, res) => {
       });
     }
 
-    // ===== USER INSTRUMENT =====
+    // ===== USER SUBSCRIPTION =====
     let [user_subscription] = await user_subscription_data(user_id);
     const instrumentSelected = user_subscription?.instrument_selected;
-    console.log('instrumentSelected', instrumentSelected)
 
-    // ===== FETCH ALL SONGS FOR THIS INSTRUMENT =====
-    let allSongs = await getAllSongsByInstrument(instrumentSelected);
+    const subscriptionName = (
+      user_subscription?.subscription_name || ""
+    ).toLowerCase();
+
+    const subscriptionAmount = Number(user_subscription?.amount);
+
+    // Trial user => trial plan OR amount = 0
+    // Paid user => monthly/yearly or amount > 0
+    const isTrialSubscription =
+      subscriptionName === "trial" ||
+      (Number.isFinite(subscriptionAmount) &&
+        subscriptionAmount === 0);
+
+    console.log("Subscription Data:", user_subscription);
+    console.log("isTrialSubscription:", isTrialSubscription);
+
+    // ===== FETCH SONGS =====
+    let allSongs = await getAllSongsByInstrument(
+      instrumentSelected,
+      isTrialSubscription
+    );
 
     // Only keep songs for this instrument (or full access)
-    allSongs = allSongs.filter(song => song.instrument_id == instrumentSelected || instrumentSelected == 5);
+    if (!isTrialSubscription) {
+      allSongs = allSongs.filter(
+        song =>
+          song.instrument_id == instrumentSelected ||
+          instrumentSelected == 5
+      );
+    }
 
     // ===== REMOVE DUPLICATES =====
     const usedSongIds = new Set();
     allSongs = allSongs.filter(song => {
-      if (usedSongIds.has(song.id)) return false;
+      if (usedSongIds.has(song.id)) {
+        return false;
+      }
+
       usedSongIds.add(song.id);
       return true;
     });
@@ -585,49 +887,87 @@ exports.homePagePaylist = async (req, res) => {
     let fetchInstId = await getinstrumentByUserid(user_id);
 
     // ===== PROCESS SONGS =====
-    const processSong = async (item) => {
-      const [favorite_data] = await get_favorite_data(user_id, item.id);
+    const processSong = async item => {
+      const [favorite_data] = await get_favorite_data(
+        user_id,
+        item.id
+      );
+
       item.is_favorite = !!favorite_data;
 
       if (item.instrument_id) {
-        const [instrument_data] = await get_instrument_data_by_instrument_id(item.instrument_id);
+        const [instrument_data] =
+          await get_instrument_data_by_instrument_id(
+            item.instrument_id
+          );
+
         item.instrument_data = instrument_data || null;
       }
 
-      const [artist_data] = await get_artist_data_artist_id(item.artist);
-      item.artist_name = artist_data?.artist_name || null;
+      const [artist_data] =
+        await get_artist_data_artist_id(item.artist);
 
-      if (item.cover_image) item.cover_image = baseurl_cover + item.cover_image;
-      if (item.solo) item.solo = baseurl_songs + item.solo;
-      if (item.click_bpm) item.click_bpm = baseurl_songs + item.click_bpm;
+      item.artist_name =
+        artist_data?.artist_name || null;
 
-      // instrument-specific tracks
+      if (item.cover_image) {
+        item.cover_image =
+          baseurl_cover + item.cover_image;
+      }
+
+      if (item.solo) {
+        item.solo = baseurl_songs + item.solo;
+      }
+
+      if (item.click_bpm) {
+        item.click_bpm =
+          baseurl_songs + item.click_bpm;
+      }
+
       item.drums =
-        item.drums && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 3)
-          ? baseurl_songs + item.drums : '';
+        item.drums &&
+          (fetchInstId[0]?.instrument_selected == 5 ||
+            fetchInstId[0]?.instrument_selected == 3)
+          ? baseurl_songs + item.drums
+          : "";
+
       item.guitar =
-        item.guitar && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 1)
-          ? baseurl_songs + item.guitar : '';
+        item.guitar &&
+          (fetchInstId[0]?.instrument_selected == 5 ||
+            fetchInstId[0]?.instrument_selected == 1)
+          ? baseurl_songs + item.guitar
+          : "";
+
       item.bass =
-        item.bass && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 2)
-          ? baseurl_songs + item.bass : '';
+        item.bass &&
+          (fetchInstId[0]?.instrument_selected == 5 ||
+            fetchInstId[0]?.instrument_selected == 2)
+          ? baseurl_songs + item.bass
+          : "";
+
       item.keyboards =
-        item.keyboards && (fetchInstId[0]?.instrument_selected == 5 || fetchInstId[0]?.instrument_selected == 4)
-          ? baseurl_songs + item.keyboards : '';
+        item.keyboards &&
+          (fetchInstId[0]?.instrument_selected == 5 ||
+            fetchInstId[0]?.instrument_selected == 4)
+          ? baseurl_songs + item.keyboards
+          : "";
+
       if (!item.master1 && item.master_song) {
         item.master1 = item.master_song;
       }
-      item.master1 = item.master1 ? baseurl_songs + item.master1 : '';
 
+      item.master1 = item.master1
+        ? baseurl_songs + item.master1
+        : "";
     };
 
     await Promise.all(allSongs.map(processSong));
 
-    // ===== GROUP BY STATIC CATEGORIES =====
+    // ===== GROUP BY CATEGORY =====
     const homeData = {
       easy: [],
       medium: [],
-      high: []
+      high: [],
     };
 
     allSongs.forEach(song => {
@@ -642,7 +982,7 @@ exports.homePagePaylist = async (req, res) => {
       message: "Home data fetched successfully",
       status: 200,
       success: true,
-      data: homeData, // always has keys: easy, medium, high
+      data: homeData,
     });
 
   } catch (error) {
@@ -654,8 +994,6 @@ exports.homePagePaylist = async (req, res) => {
     });
   }
 };
-
-
 
 // exports.homePagePaylist = async (req, res) => {
 //   try {
@@ -1723,6 +2061,105 @@ exports.get_songs_by_genre = async (req, res) => {
 };
 
 // created by @Krishn 19-02-2026
+// exports.get_songs_by_instrument = async (req, res) => {
+//   try {
+//     const { instrument_id, user_id } = req.body;
+
+//     const schema = Joi.object({
+//       instrument_id: Joi.number().required(),
+//       user_id: Joi.number().required(),
+//     });
+
+//     const { error } = schema.validate(req.body);
+//     if (error) {
+//       return res.json({
+//         success: false,
+//         status: 400,
+//         message: error.details[0].message,
+//       });
+//     }
+
+//     let songs = [];
+
+//     // ===== CASE LOGIC =====
+//     if (instrument_id == 5) {
+//       songs = await getSongs_All();
+//     } else {
+//       songs = await getSongs_All_By_Instrument(instrument_id);
+//     }
+
+//     if (!songs || songs.length === 0) {
+//       return res.json({
+//         success: true,
+//         status: 200,
+//         message: "Instrument songs fetched successfully",
+//         data: [],
+//       });
+//     }
+
+//     // ===== PROCESS SONGS =====
+//     const processedSongs = await Promise.all(
+//       songs.map(async (song) => {
+
+//         // favorite
+//         const [favorite_data] = await get_favorite_data(user_id, song.id);
+//         song.is_favorite = !!favorite_data;
+
+//         const genre_data = await getGenreDataByGenreId(song.genre);
+
+//         // image base url
+//         if (genre_data?.image) {
+//           genre_data.image = baseurl_cover + genre_data.image;
+//         }
+
+//         song.genre_data = genre_data;
+
+//         // artist
+//         const [artist_data] = await get_artist_data_artist_id(song.artist);
+//         song.artist_name = artist_data?.artist_name || null;
+
+//         // base urls
+//         if (song.cover_image) song.cover_image = baseurl_cover + song.cover_image;
+//         if (song.solo) song.solo = baseurl_songs + song.solo;
+//         if (song.click_bpm) song.click_bpm = baseurl_songs + song.click_bpm;
+
+//         // ONLY THIS LINE ADDED — NOTHING ELSE
+//         if (!song.master1 && song.vocals) {
+//           song.master1 = song.vocals;
+//         }
+//         if (song.master1) {
+//           song.master1 = baseurl_songs + song.master1;
+//         }
+
+//         song.guitar = song.guitar ? baseurl_songs + song.guitar : "";
+//         song.bass = song.bass ? baseurl_songs + song.bass : "";
+//         song.drums = song.drums ? baseurl_songs + song.drums : "";
+//         song.keyboards = song.keyboards ? baseurl_songs + song.keyboards : "";
+
+//         return song;
+//       })
+//     );
+
+
+
+//     return res.json({
+//       success: true,
+//       status: 200,
+//       message: "Instrument songs fetched successfully",
+//       data: processedSongs,
+//     });
+//   } catch (error) {
+//     console.error("Error in get_songs_by_instrument:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       status: 500,
+//       error: error.message || error,
+//     });
+//   }
+// };
+
+
 exports.get_songs_by_instrument = async (req, res) => {
   try {
     const { instrument_id, user_id } = req.body;
@@ -1733,6 +2170,7 @@ exports.get_songs_by_instrument = async (req, res) => {
     });
 
     const { error } = schema.validate(req.body);
+
     if (error) {
       return res.json({
         success: false,
@@ -1741,6 +2179,20 @@ exports.get_songs_by_instrument = async (req, res) => {
       });
     }
 
+    // ===== USER SUBSCRIPTION =====
+    let [user_subscription] = await user_subscription_data(user_id);
+
+    const subscriptionName = (
+      user_subscription?.subscription_name || ""
+    ).toLowerCase();
+
+    const subscriptionAmount = Number(user_subscription?.amount);
+
+    const isTrialSubscription =
+      subscriptionName === "trial" ||
+      (Number.isFinite(subscriptionAmount) &&
+        subscriptionAmount === 0);
+
     let songs = [];
 
     // ===== CASE LOGIC =====
@@ -1748,6 +2200,13 @@ exports.get_songs_by_instrument = async (req, res) => {
       songs = await getSongs_All();
     } else {
       songs = await getSongs_All_By_Instrument(instrument_id);
+    }
+
+    // ===== TRIAL USER ONLY FREE SONGS =====
+    if (isTrialSubscription) {
+      songs = songs.filter(
+        (song) => Number(song.is_free_song) === 1
+      );
     }
 
     if (!songs || songs.length === 0) {
@@ -1785,10 +2244,10 @@ exports.get_songs_by_instrument = async (req, res) => {
         if (song.solo) song.solo = baseurl_songs + song.solo;
         if (song.click_bpm) song.click_bpm = baseurl_songs + song.click_bpm;
 
-        // ONLY THIS LINE ADDED — NOTHING ELSE
         if (!song.master1 && song.vocals) {
           song.master1 = song.vocals;
         }
+
         if (song.master1) {
           song.master1 = baseurl_songs + song.master1;
         }
@@ -1802,16 +2261,16 @@ exports.get_songs_by_instrument = async (req, res) => {
       })
     );
 
-
-
     return res.json({
       success: true,
       status: 200,
       message: "Instrument songs fetched successfully",
       data: processedSongs,
     });
+
   } catch (error) {
     console.error("Error in get_songs_by_instrument:", error);
+
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -1820,8 +2279,6 @@ exports.get_songs_by_instrument = async (req, res) => {
     });
   }
 };
-
-
 
 
 
