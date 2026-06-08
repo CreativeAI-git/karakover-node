@@ -237,10 +237,46 @@ module.exports = {
     );
   },
 
-  getAllSongsByInstrument: async (instrumentId) => {
-    const query = `
-    SELECT 
-      s.*,                      -- song table ka id safe rahega
+  // getAllSongsByInstrument: async (instrumentId, freeSongsOnly = false) => {
+  //   let query = `
+  //   SELECT 
+  //     s.*,                      -- song table ka id safe rahega
+  //     mf.song_id,
+  //     mf.chords_songs,
+  //     mf.vocals,
+  //     mf.master_song AS master1,
+  //     mf.solo,
+  //     mf.click_bpm,
+  //     mf.bass,
+  //     mf.drums,
+  //     mf.guitar,
+  //     mf.keyboards,
+  //     mf.claps,
+  //     mf.backing_track_guitar,
+  //     mf.backing_track_bass,
+  //     mf.backing_track_drums,
+  //     mf.backing_track_keys,
+  //     mf.all_file_names,
+  //     mf.song_type,
+  //     mf.updated_at
+  //   FROM tbl_songs s
+  //   JOIN tbl_music_files mf ON mf.song_id = s.id
+  //   WHERE (s.instrument_id = ? OR ? = 5)
+  // `;
+
+  //   if (freeSongsOnly) {
+  //     query += ` AND s.is_free_song = 1`;
+  //   }
+
+  //   query += ` ORDER BY s.id DESC`;
+
+  //   return db.query(query, [instrumentId, instrumentId]);
+  // },
+
+  getAllSongsByInstrument: async (instrumentId, freeSongsOnly = false) => {
+    let query = `
+    SELECT
+      s.*,
       mf.song_id,
       mf.chords_songs,
       mf.vocals,
@@ -261,12 +297,23 @@ module.exports = {
       mf.updated_at
     FROM tbl_songs s
     JOIN tbl_music_files mf ON mf.song_id = s.id
-    WHERE s.instrument_id = ? OR ? = 5
-    ORDER BY s.id DESC
   `;
-    return db.query(query, [instrumentId, instrumentId]);
-  },
 
+    if (freeSongsOnly) {
+      // Trial user -> all free songs
+      query += ` WHERE s.is_free_song = 1 `;
+    } else {
+      // Paid user -> instrument wise songs
+      query += ` WHERE (s.instrument_id = ? OR ? = 5) `;
+    }
+
+    query += ` ORDER BY s.id DESC`;
+
+    return freeSongsOnly
+      ? db.query(query)
+      : db.query(query, [instrumentId, instrumentId]);
+  },
+  
   getUserSubscription: async (user_id) => {
     const sql = `
     SELECT instrument_selected
@@ -829,7 +876,7 @@ module.exports = {
     return db.query(`SELECT * from tbl_artists  where id = '${artist_id}' `);
   },
 
- fetchPrivacyPolicy: async () => {
+  fetchPrivacyPolicy: async () => {
     return db.query("select * from tbl_terms_and_condition where id = 2");
   },
 
