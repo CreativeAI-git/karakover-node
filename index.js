@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const user = require("./routes/users");
 const home = require("./routes/home");
+const stripe = require("./routes/stripe");
 var path = require("path");
 const appex = express();
 const http = require("http");
@@ -12,6 +13,7 @@ const fs = require("fs");
 const port = process.env.PORT || 3000;
 const songsPath = process.env.SONGS_PATH || path.join(__dirname, "public/assets/songs");
 const serverSongsPath = process.env.SERVER_SONGS_PATH;
+const shouldLogStaticPaths = process.env.LOG_STATIC_PATHS === "true";
 
 appex.use(cors());
 
@@ -28,7 +30,9 @@ global.__basedir = __dirname;
 global.S3_URL = process.env.S3_URL || "https://api.karakover.com/assets/songs/";
 // global.S3_URL = "http://karakover.com/assets/songs/";
 
-console.log(songsPath, "songs path");
+if (shouldLogStaticPaths) {
+  console.info(`[server] Serving local songs from: ${songsPath}`);
+}
 
 appex.use(
   "/assets/songs",
@@ -40,7 +44,9 @@ appex.use(
 );
 
 if (serverSongsPath) {
-  console.log(serverSongsPath, "server songs path");
+  if (shouldLogStaticPaths) {
+    console.info(`[server] Serving server songs from: ${serverSongsPath}`);
+  }
 
   appex.use(
     "/assets/songs",
@@ -53,7 +59,7 @@ if (serverSongsPath) {
 }
 
 
-
+appex.use("/", stripe);
 appex.use(express.json());
 appex.use(
   express.urlencoded({
@@ -102,6 +108,6 @@ appex.get("/", (req, res) => {
 
 
 appex.listen(port, function () {
-  console.log(`Node App is running on port ${port}`);
+  console.info(`[server] API listening: http://localhost:${port}`);
 });
 module.exports = appex;

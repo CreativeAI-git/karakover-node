@@ -353,8 +353,7 @@ exports.login = async (req, res) => {
     user.instrument_selected = instrument.length > 0 ? instrument[0].instrument_selected : "";
 
     // **Fetch payment status**
-    const paymentData = await fetchPaymentByUserId(user.id); // you need to implement this function
-    console.log('paymentData', paymentData);
+    const paymentData = await fetchPaymentByUserId(user.id);
     user.payment_done = paymentData && paymentData.payment_status === 1 ? true : false;
 
     return res.json({
