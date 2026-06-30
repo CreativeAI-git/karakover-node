@@ -3,8 +3,7 @@ const path=require('path')
 const hash = require('random-hash'); 
 const storage=multer.diskStorage({
   destination: (req,file,cb) => { 
-    // cb(null, "/var/www/html/assets/songs/");
-    cb(null, "/home/karaoke-app/public/assets/songs/");
+    cb(null, __basedir + "/public/uploads/");
   },
   filename: (req,file,cb) => {
     let temp = file.originalname.replace(/\s+/g, '').split('.'); //temp[0] +
@@ -31,7 +30,7 @@ const upload=multer({
     // limits:{
     //     fileSize:1024*1024*10
     // },
-    //fileFilter:fileFilter
+    // fileFilter:fileFilter
    
 })
 

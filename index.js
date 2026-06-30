@@ -81,7 +81,7 @@ appex.get("/", (req, res) => {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   } else {
-    return res.send({ success: "0", message: "Hello World" });
+    return res.send({ success: false, message: "Hello World" });
   }
 });
 

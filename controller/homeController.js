@@ -1620,6 +1620,7 @@ exports.homePage = async (req, res) => {
 
 exports.get_song = async (req, res) => {
   try {
+    console.log('ttttttttttt')
     const { user_id } = req.body;
 
     const schema = Joi.object({
@@ -1667,7 +1668,7 @@ exports.get_song = async (req, res) => {
           ? `https://karakover.com/assets/artist/${artist_data.image}`
           : "";
 
-        item.songUrl = `https://api.karakover.com/assets/songs/${item.songs || song_data.track_no}`;
+        item.songUrl = `http://172.20.10.2:3000/uploads/${item.songs || song_data.track_no}`;
         item.image = base_url + "karokeLogo.png";
 
         item.firstname = userdata[0]?.firstname;

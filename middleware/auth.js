@@ -15,7 +15,7 @@ const auth = async (req, res, next) => {
         return res.json({
           message: "Token Not Provided",
           status: 400,
-          success: "0",
+          success: false,
         });
       }
 
@@ -30,21 +30,21 @@ const auth = async (req, res, next) => {
         return res.json({
           message: "Access Forbidden",
           status: 401,
-          success: "0",
+          success: false,
         });
       }
     } else {
       return res.json({
         message: "Token Not Provided",
         status: 400,
-        success: "0",
+        success: false,
       });
     }
   } catch (err) {
     return res.json({
       message: "Access forbidden",
       status: 401,
-      success: "0",
+      success: false,
     });
   }
 };
