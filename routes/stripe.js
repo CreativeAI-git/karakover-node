@@ -20,8 +20,7 @@ router.post(
   stripeController.createCheckoutSession
 );
 router.get("/subscription-status", auth, stripeController.getSubscriptionStatus);
-router.post(
-  "/cancel-subscription",
+router.post("/cancel-subscription",
   auth,
   express.json(),
   stripeController.cancelSubscription

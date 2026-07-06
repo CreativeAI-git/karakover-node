@@ -28,13 +28,62 @@ function failure(res, statusCode, message, details) {
   });
 }
 
+// function paymentPage(title, message) {
+//   return `<!doctype html>
+// <html lang="en">
+// <head>
+//   <meta charset="utf-8">
+//   <meta name="viewport" content="width=device-width, initial-scale=1">
+//   <title>${title}</title>
+//   <style>
+//     body {
+//       margin: 0;
+//       min-height: 100vh;
+//       display: flex;
+//       align-items: center;
+//       justify-content: center;
+//       font-family: Arial, sans-serif;
+//       color: #151515;
+//       background: #f7f7f2;
+//     }
+//     main {
+//       width: min(480px, calc(100% - 32px));
+//       padding: 32px;
+//       border: 1px solid #ddd;
+//       border-radius: 8px;
+//       background: #fff;
+//       text-align: center;
+//     }
+//     h1 {
+//       margin: 0 0 12px;
+//       font-size: 28px;
+//       line-height: 1.2;
+//     }
+//     p {
+//       margin: 0;
+//       color: #555;
+//       line-height: 1.5;
+//     }
+//   </style>
+// </head>
+// <body>
+//   <main>
+//     <h1>${title}</h1>
+//     <p>${message}</p>
+//   </main>
+// </body>
+// </html>`;
+// }
 function paymentPage(title, message) {
+  const appUrl = process.env.APP_URL.replace(/\/$/, "");
+
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
+
   <style>
     body {
       margin: 0;
@@ -46,6 +95,7 @@ function paymentPage(title, message) {
       color: #151515;
       background: #f7f7f2;
     }
+
     main {
       width: min(480px, calc(100% - 32px));
       padding: 32px;
@@ -53,24 +103,57 @@ function paymentPage(title, message) {
       border-radius: 8px;
       background: #fff;
       text-align: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
     }
+
     h1 {
       margin: 0 0 12px;
       font-size: 28px;
       line-height: 1.2;
     }
+
     p {
-      margin: 0;
+      margin: 0 0 24px;
       color: #555;
       line-height: 1.5;
     }
+
+    button {
+      background: #e91e63;
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #c2185b;
+    }
   </style>
 </head>
+
 <body>
+
   <main>
+
     <h1>${title}</h1>
+
     <p>${message}</p>
+<button type="button" onclick="goHome()">
+  OK
+</button>
+
   </main>
+
+  <script>
+    function goHome() {
+      window.location.href = "${appUrl}/";
+    }
+  </script>
+
 </body>
 </html>`;
 }

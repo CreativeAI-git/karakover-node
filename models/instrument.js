@@ -1,7 +1,8 @@
 const db = require("../utils/database");
 module.exports = {
   fetchInstrumentList: async () => {
-    return db.query("select * from tbl_instruments where id != '5' LIMIT 6");
+    // return db.query("select * from tbl_instruments where id != '5' LIMIT 6");
+    return db.query ("select * from tbl_instruments");
   },
 
   fetchInsById: async (id) => {

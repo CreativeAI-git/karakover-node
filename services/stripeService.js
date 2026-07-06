@@ -28,7 +28,8 @@ function getWebhookSecret() {
 
 function buildCheckoutUrls() {
   const appUrl = requireEnv("APP_URL").replace(/\/$/, "");
-  const successUrl = `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+  // const successUrl = `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+  const successUrl = `${appUrl}/?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${appUrl}/payment-cancel`;
 
   console.log("Success URL:", successUrl);

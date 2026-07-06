@@ -803,7 +803,7 @@ exports.userProfile = async (req, res) => {
           email: results[0]["email"],
           phone: results[0]["phone"],
           image: profileImage,
-          instrument_selected: instrument[0]["instrument_selected"],
+          instrument_selected: instrument?.[0]?.instrument_selected || "",
         };
 
         return res.json({
@@ -1208,7 +1208,7 @@ exports.song_request = async (req, res) => {
         return res.status(200).json({
           success: true,
           status: 200,
-          message: "Insert song request successfully!",
+          message: "Your song request sent successfully!",
           data: result,
         });
       }
