@@ -142,7 +142,7 @@ function paymentPage(title, message) {
     <h1>${title}</h1>
 
     <p>${message}</p>
-<button type="button" onclick="goHome()">
+<button type="button" onclick="goHome()" style="display:inline-block; visibility:visible; opacity:1;">
   OK
 </button>
 
@@ -221,11 +221,138 @@ function isValidStripePriceId(priceId) {
   );
 }
 
+function normalizeStripeSubscriptionStatus(status) {
+  if (status === "trialing") {
+    return "trial";
+  }
+
+  if (["active", "cancelled", "expired", "past_due", "trial"].includes(status)) {
+    return status;
+  }
+
+  return status === "canceled" ? "cancelled" : "expired";
+}
+
+function getSessionMetadata(session) {
+  return {
+    ...(session.subscription?.metadata || {}),
+    ...(session.metadata || {}),
+  };
+}
+
+function isActiveLocalSubscription(subscription) {
+  return Boolean(
+    subscription &&
+      Number(subscription.payment_status) === 1 &&
+      ["active", "trial", "past_due"].includes(subscription.subscription_status)
+  );
+}
+
+function buildSubscriptionData({
+  userId,
+  plan,
+  selectedInstrument,
+  stripeCustomerId,
+  stripeSubscriptionId,
+  stripeSubscription,
+}) {
+  const startDate = stripeSubscription?.current_period_start
+    ? moment.unix(stripeSubscription.current_period_start)
+    : moment();
+  const subscriptionDays = stripeSubscription?.current_period_end
+    ? Math.max(
+        1,
+        moment.unix(stripeSubscription.current_period_end).diff(startDate, "days")
+      )
+    : getPlanDays(plan);
+  const endDate = stripeSubscription?.current_period_end
+    ? moment.unix(stripeSubscription.current_period_end)
+    : moment(startDate).add(subscriptionDays, "days");
+
+  return {
+    user_id: userId,
+    plan_id: plan.id,
+    instrument_selected: getInstrumentForPlan(plan, selectedInstrument),
+    amount: normalizeAmount(plan.price),
+    subscription_name: getSubscriptionNameForPlan(plan),
+    subscription_start_date: startDate.format("YYYY-MM-DD HH:mm:ss"),
+    subscription_end_date: endDate.format("YYYY-MM-DD HH:mm:ss"),
+    subscription_days: subscriptionDays,
+    payment_status: 1,
+    stripe_customer_id: stripeCustomerId,
+    stripe_subscription_id: stripeSubscriptionId,
+    stripe_price_id: plan.stripe_price_id,
+    subscription_status: normalizeStripeSubscriptionStatus(
+      stripeSubscription?.status || "active"
+    ),
+  };
+}
+
+async function savePaidSubscription(subscriptionData) {
+  const [latestSubscription] = await stripeModel.getLatestAnySubscriptionByUserId(
+    subscriptionData.user_id
+  );
+
+  await stripeModel.expireAllActiveSubscriptions(subscriptionData.user_id);
+
+  const canReusePlaceholder =
+    latestSubscription &&
+    Number(latestSubscription.payment_status) !== 1 &&
+    !latestSubscription.stripe_subscription_id;
+
+  if (canReusePlaceholder) {
+    console.log("Updating existing subscription placeholder", {
+      id: latestSubscription.id,
+      ...subscriptionData,
+    });
+    await stripeModel.updateSubscriptionById(latestSubscription.id, subscriptionData);
+    await stripeModel.updateUserPaymentStatus(subscriptionData.user_id, 1);
+
+    return {
+      id: latestSubscription.id,
+      ...subscriptionData,
+    };
+  }
+
+  console.log("Creating subscription", subscriptionData);
+  const created = await stripeModel.createSubscription(subscriptionData);
+  await stripeModel.updateUserPaymentStatus(subscriptionData.user_id, 1);
+
+  return {
+    id: created.insertId,
+    ...subscriptionData,
+  };
+}
+
+async function completeUpgradePreviousSubscription({
+  currentSubscriptionId,
+  previousSubscriptionId,
+  previousStripeSubscriptionId,
+  newStripeSubscriptionId,
+}) {
+  if (!previousSubscriptionId || previousSubscriptionId === currentSubscriptionId) {
+    return;
+  }
+
+  if (
+    previousStripeSubscriptionId &&
+    previousStripeSubscriptionId !== newStripeSubscriptionId
+  ) {
+    await stripeService.cancelSubscription(previousStripeSubscriptionId);
+  }
+
+  await stripeModel.expireSubscription(previousSubscriptionId);
+}
+
 async function createSubscriptionFromCheckoutSession(session) {
-  const metadata = session.metadata || {};
+  const metadata = getSessionMetadata(session);
   const userId = Number(metadata.user_id);
   const planId = Number(metadata.plan_id);
   const selectedInstrument = Number(metadata.selected_instrument);
+  const previousSubscriptionId = Number(metadata.previous_subscription_id);
+  const previousStripeSubscriptionId = metadata.previous_stripe_subscription_id;
+  const isUpgradeFlow = metadata.checkout_flow === "upgrade";
+  const stripeSubscriptionId = getStripeId(session.subscription);
 
   console.log("Checkout session metadata:", metadata);
 
@@ -233,79 +360,118 @@ async function createSubscriptionFromCheckoutSession(session) {
     throw new Error("Stripe session metadata is missing user_id or plan_id");
   }
 
+  const [existingSubscription] = await stripeModel.getSubscriptionByStripeId(
+    stripeSubscriptionId
+  );
+
   const [plan] = await stripeModel.getPlanById(planId);
   if (!plan) {
     throw new Error(`Plan not found for Stripe session: ${planId}`);
   }
 
-  const [existingSubscription] = await stripeModel.getSubscriptionByStripeId(
-    getStripeId(session.subscription)
-  );
   if (existingSubscription) {
-    await createPaymentRecordFromSession({
+    await updateSubscriptionPaymentDetails({
       session,
-      userId,
-      planId,
       subscriptionId: existingSubscription.id,
       plan,
     });
+    await stripeModel.updateUserPaymentStatus(existingSubscription.user_id, 1);
+    if (isUpgradeFlow) {
+      await completeUpgradePreviousSubscription({
+        currentSubscriptionId: existingSubscription.id,
+        previousSubscriptionId,
+        previousStripeSubscriptionId,
+        newStripeSubscriptionId: stripeSubscriptionId,
+      });
+    }
 
     return existingSubscription;
   }
 
-  const subscriptionDays = getPlanDays(plan);
-  const startDate = moment();
-  const endDate = moment(startDate).add(subscriptionDays, "days");
-  const instrumentSelected = getInstrumentForPlan(plan, selectedInstrument);
-
-  const subscriptionData = {
-    user_id: userId,
-    plan_id: planId,
-    instrument_selected: instrumentSelected,
-    amount: normalizeAmount(plan.price),
-    subscription_name: getSubscriptionNameForPlan(plan),
-    subscription_start_date: startDate.format("YYYY-MM-DD HH:mm:ss"),
-    subscription_end_date: endDate.format("YYYY-MM-DD HH:mm:ss"),
-    subscription_days: subscriptionDays,
-    payment_status: 1,
-    stripe_customer_id: getStripeId(session.customer),
-    stripe_subscription_id: getStripeId(session.subscription),
-    stripe_price_id: plan.stripe_price_id,
-    subscription_status: "active",
-  };
-
-  console.log("Creating subscription", subscriptionData);
-
-  const created = await stripeModel.createSubscription(subscriptionData);
-  const subscriptionId = created.insertId;
-
-  await createPaymentRecordFromSession({
-    session,
+  const subscriptionData = buildSubscriptionData({
     userId,
-    planId,
-    subscriptionId,
+    plan,
+    selectedInstrument,
+    stripeCustomerId: getStripeId(session.customer),
+    stripeSubscriptionId,
+    stripeSubscription:
+      typeof session.subscription === "object" ? session.subscription : null,
+  });
+
+  const createdSubscription = await savePaidSubscription(subscriptionData);
+
+  if (isUpgradeFlow) {
+    await completeUpgradePreviousSubscription({
+      currentSubscriptionId: createdSubscription.id,
+      previousSubscriptionId,
+      previousStripeSubscriptionId,
+      newStripeSubscriptionId: stripeSubscriptionId,
+    });
+  }
+
+  await updateSubscriptionPaymentDetails({
+    session,
+    subscriptionId: createdSubscription.id,
     plan,
   });
 
-  return {
-    id: subscriptionId,
-    ...subscriptionData,
-  };
+  return createdSubscription;
+
 }
 
-async function createPaymentRecordFromSession({
-  session,
-  userId,
-  planId,
-  subscriptionId,
-  plan,
-}) {
+// async function createPaymentRecordFromSession({
+//   session,
+//   userId,
+//   planId,
+//   subscriptionId,
+//   plan,
+// }) {
+//   const invoiceId = getStripeId(session.invoice);
+
+//   if (invoiceId) {
+//     const [existingPayment] = await stripeModel.getPaymentByInvoiceId(invoiceId);
+//     if (existingPayment) {
+//       return existingPayment;
+//     }
+//   }
+
+//   let paymentIntentId = getStripeId(session.payment_intent);
+//   let amount = normalizeAmount(plan.price);
+//   let currency = plan.currency || "usd";
+//   let paymentStatus = normalizeStripePaymentStatus(session.payment_status);
+
+//   if (invoiceId) {
+//     const invoice = await stripeService.retrieveInvoice(invoiceId);
+//     paymentIntentId = getStripeId(invoice.payment_intent) || paymentIntentId;
+//     amount = invoice.amount_paid ? invoice.amount_paid / 100 : amount;
+//     currency = invoice.currency || currency;
+//     paymentStatus = normalizeStripePaymentStatus(invoice.status);
+//   }
+
+//   const paymentPayload = {
+//     user_id: userId,
+//     plan_id: planId,
+//     subscription_id: subscriptionId,
+//     stripe_payment_intent_id: paymentIntentId,
+//     stripe_invoice_id: invoiceId,
+//     amount,
+//     currency,
+//     payment_status: paymentStatus,
+//     created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+//   };
+
+//   console.log("Creating payment record", paymentPayload);
+
+//   return stripeModel.createPaymentRecord(paymentPayload);
+// }
+
+async function updateSubscriptionPaymentDetails({ session, subscriptionId, plan }) {
   const invoiceId = getStripeId(session.invoice);
 
   if (invoiceId) {
-    const [existingPayment] = await stripeModel.getPaymentByInvoiceId(invoiceId);
-    if (existingPayment) {
-      return existingPayment;
+    const [existing] = await stripeModel.getSubscriptionByInvoiceId(invoiceId);
+    if (existing) {
+      return existing;
     }
   }
 
@@ -323,23 +489,61 @@ async function createPaymentRecordFromSession({
   }
 
   const paymentPayload = {
-    user_id: userId,
-    plan_id: planId,
-    subscription_id: subscriptionId,
-    stripe_payment_intent_id: paymentIntentId,
-    stripe_invoice_id: invoiceId,
     amount,
     currency,
-    payment_status: paymentStatus,
-    created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+    stripe_payment_intent_id: paymentIntentId,
+    stripe_invoice_id: invoiceId,
+    stripe_payment_status: paymentStatus,
   };
 
-  console.log("Creating payment record", paymentPayload);
+  console.log("Updating subscription payment details", paymentPayload);
 
-  return stripeModel.createPaymentRecord(paymentPayload);
+  return stripeModel.updateSubscriptionById(subscriptionId, paymentPayload);
 }
 
-async function createPaymentRecordFromInvoice(invoice) {
+// async function createPaymentRecordFromInvoice(invoice) {
+//   const stripeSubscriptionId = getStripeId(invoice.subscription);
+
+//   if (!stripeSubscriptionId) {
+//     console.log("invoice.paid missing subscription id:", invoice.id);
+//     return;
+//   }
+
+//   const [subscription] = await stripeModel.getSubscriptionByStripeId(
+//     stripeSubscriptionId
+//   );
+//   if (!subscription) {
+//     console.log("No local subscription found for invoice:", {
+//       invoice_id: invoice.id,
+//       stripe_subscription_id: stripeSubscriptionId,
+//     });
+//     return;
+//   }
+
+//   const [existingPayment] = await stripeModel.getPaymentByInvoiceId(invoice.id);
+//   if (existingPayment) {
+//     console.log("Payment record already exists for invoice:", invoice.id);
+//     return;
+//   }
+
+//   const paymentPayload = {
+//     user_id: subscription.user_id,
+//     plan_id: subscription.plan_id,
+//     subscription_id: subscription.id,
+//     stripe_payment_intent_id: getStripeId(invoice.payment_intent),
+//     stripe_invoice_id: invoice.id,
+//     amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
+//     currency: invoice.currency,
+//     payment_status: normalizeStripePaymentStatus(invoice.status),
+//     created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+//   };
+
+//   console.log("Creating payment record", paymentPayload);
+
+//   await stripeModel.createPaymentRecord(paymentPayload);
+// }
+
+async function updateSubscriptionFromInvoice(invoice) {
   const stripeSubscriptionId = getStripeId(invoice.subscription);
 
   if (!stripeSubscriptionId) {
@@ -351,34 +555,83 @@ async function createPaymentRecordFromInvoice(invoice) {
     stripeSubscriptionId
   );
   if (!subscription) {
-    console.log("No local subscription found for invoice:", {
-      invoice_id: invoice.id,
-      stripe_subscription_id: stripeSubscriptionId,
+    const stripeSubscription = await stripeService.retrieveSubscription(
+      stripeSubscriptionId
+    );
+    const metadata = stripeSubscription.metadata || {};
+    const userId = Number(metadata.user_id);
+    const planId = Number(metadata.plan_id);
+    const selectedInstrument = Number(metadata.selected_instrument);
+    const previousSubscriptionId = Number(metadata.previous_subscription_id);
+    const previousStripeSubscriptionId = metadata.previous_stripe_subscription_id;
+    const isUpgradeFlow = metadata.checkout_flow === "upgrade";
+
+    if (!userId || !planId) {
+      console.log("No local subscription found and Stripe metadata is missing:", {
+        invoice_id: invoice.id,
+        stripe_subscription_id: stripeSubscriptionId,
+        metadata,
+      });
+      return;
+    }
+
+    const [plan] = await stripeModel.getPlanById(planId);
+    if (!plan) {
+      console.log("No plan found for invoice metadata:", {
+        invoice_id: invoice.id,
+        plan_id: planId,
+      });
+      return;
+    }
+
+    const createdSubscription = await savePaidSubscription(
+      buildSubscriptionData({
+        userId,
+        plan,
+        selectedInstrument,
+        stripeCustomerId: getStripeId(invoice.customer) || getStripeId(stripeSubscription.customer),
+        stripeSubscriptionId,
+        stripeSubscription,
+      })
+    );
+
+    if (isUpgradeFlow) {
+      await completeUpgradePreviousSubscription({
+        currentSubscriptionId: createdSubscription.id,
+        previousSubscriptionId,
+        previousStripeSubscriptionId,
+        newStripeSubscriptionId: stripeSubscriptionId,
+      });
+    }
+
+    await stripeModel.updateSubscriptionById(createdSubscription.id, {
+      stripe_payment_intent_id: getStripeId(invoice.payment_intent),
+      stripe_invoice_id: invoice.id,
+      amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
+      currency: invoice.currency,
+      stripe_payment_status: normalizeStripePaymentStatus(invoice.status),
     });
+
     return;
   }
 
-  const [existingPayment] = await stripeModel.getPaymentByInvoiceId(invoice.id);
-  if (existingPayment) {
-    console.log("Payment record already exists for invoice:", invoice.id);
+  if (subscription.stripe_invoice_id === invoice.id) {
+    console.log("Invoice already processed:", invoice.id);
     return;
   }
 
   const paymentPayload = {
-    user_id: subscription.user_id,
-    plan_id: subscription.plan_id,
-    subscription_id: subscription.id,
     stripe_payment_intent_id: getStripeId(invoice.payment_intent),
     stripe_invoice_id: invoice.id,
     amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
     currency: invoice.currency,
-    payment_status: normalizeStripePaymentStatus(invoice.status),
-    created_at: moment().format("YYYY-MM-DD HH:mm:ss"),
+    stripe_payment_status: normalizeStripePaymentStatus(invoice.status),
   };
 
-  console.log("Creating payment record", paymentPayload);
+  console.log("Updating subscription payment details from invoice", paymentPayload);
 
-  await stripeModel.createPaymentRecord(paymentPayload);
+  await stripeModel.updateSubscriptionById(subscription.id, paymentPayload);
+  await stripeModel.updateUserPaymentStatus(subscription.user_id, 1);
 }
 
 async function updateSubscriptionFromStripe(stripeSubscription) {
@@ -394,8 +647,8 @@ async function updateSubscriptionFromStripe(stripeSubscription) {
     : null;
 
   const data = {
-    subscription_status: stripeSubscription.status,
-    payment_status: stripeSubscription.status === "active" ? 1 : 0,
+    subscription_status: normalizeStripeSubscriptionStatus(stripeSubscription.status),
+    payment_status: ["active", "trialing"].includes(stripeSubscription.status) ? 1 : 0,
   };
 
   if (startDate) {
@@ -440,6 +693,18 @@ exports.createCheckoutSession = async (req, res) => {
     const { error, value } = schema.validate(req.body);
     if (error) {
       return failure(res, 400, error.details[0].message);
+    }
+
+    const [currentSubscription] =
+      await stripeModel.getLatestSubscription(userId);
+
+    if (isActiveLocalSubscription(currentSubscription)) {
+      return failure(
+        res,
+        409,
+        "Active subscription already exists. Use upgrade-subscription.",
+        { action: "upgrade-subscription" }
+      );
     }
 
     const [user] = await stripeModel.getUserById(userId);
@@ -539,8 +804,19 @@ exports.handleWebhook = async (req, res) => {
         await createSubscriptionFromCheckoutSession(event.data.object);
         break;
 
+      // case "invoice.paid":
+      //   await createPaymentRecordFromInvoice(event.data.object);
+      //   if (getStripeId(event.data.object.subscription)) {
+      //     await updateSubscriptionFromStripe(
+      //       await stripeService.retrieveSubscription(
+      //         getStripeId(event.data.object.subscription)
+      //       )
+      //     );
+      //   }
+      //   break;
+
       case "invoice.paid":
-        await createPaymentRecordFromInvoice(event.data.object);
+        await updateSubscriptionFromInvoice(event.data.object);
         if (getStripeId(event.data.object.subscription)) {
           await updateSubscriptionFromStripe(
             await stripeService.retrieveSubscription(
@@ -592,7 +868,14 @@ exports.getSubscriptionStatus = async (req, res) => {
     }
 
     const [subscription] = await stripeModel.getLatestSubscription(userId);
-    return success(res, 200, { subscription: subscription || null });
+    return success(res, 200, {
+      has_active_subscription: isActiveLocalSubscription(subscription),
+      button_text: isActiveLocalSubscription(subscription) ? "Upgrade" : "Buy Now",
+      action: isActiveLocalSubscription(subscription)
+        ? "upgrade-subscription"
+        : "create-checkout-session",
+      subscription: subscription || null,
+    });
   } catch (error) {
     console.error("getSubscriptionStatus error:", error);
     return failure(res, 500, "Internal server error");
@@ -605,24 +888,139 @@ exports.cancelSubscription = async (req, res) => {
     if (!userId) {
       return failure(res, 401, "Unauthorized");
     }
+    const subscriptions = await stripeModel.getLatestCancelableSubscription(userId);
+    let subscription = subscriptions[0];
 
-    const [subscription] = await stripeModel.getLatestSubscription(userId);
     if (!subscription) {
+      const latestSubscriptions =
+        await stripeModel.getLatestAnySubscriptionByUserId(userId);
+      const latestSubscription = latestSubscriptions[0];
+
+      if (latestSubscription) {
+        if (!latestSubscription.stripe_subscription_id) {
+          return failure(res, 400, "Subscription is missing Stripe subscription id");
+        }
+
+        if (
+          ["cancelled", "canceled", "expired"].includes(
+            latestSubscription.subscription_status
+          )
+        ) {
+          return failure(res, 400, "Subscription is already cancelled or expired");
+        }
+      }
+
       return failure(res, 404, "Active subscription not found");
     }
 
     if (!subscription.stripe_subscription_id) {
       return failure(res, 400, "Subscription is missing Stripe subscription id");
     }
-
     await stripeService.cancelSubscription(subscription.stripe_subscription_id);
     await stripeModel.cancelSubscription(subscription.id);
-
+    await stripeModel.updateUserPaymentStatus(userId, 0);
     return success(res, 200, {
       message: "Subscription cancelled successfully",
     });
   } catch (error) {
     console.error("cancelSubscription error:", error);
+    return failure(res, 500, "Internal server error");
+  }
+};
+
+
+exports.upgradeSubscription = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return failure(res, 401, "Unauthorized");
+    }
+
+    const schema = Joi.object({
+      plan_id: Joi.number().integer().positive().required(),
+      selected_instrument: Joi.number()
+        .integer()
+        .valid(...VALID_INSTRUMENT_IDS)
+        .optional(),
+    });
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      return failure(res, 400, error.details[0].message);
+    }
+    const [currentSubscription] =
+      await stripeModel.getLatestSubscription(userId);
+
+    if (!isActiveLocalSubscription(currentSubscription)) {
+      return failure(
+        res,
+        404,
+        "No active subscription found. Use create-checkout-session.",
+        { action: "create-checkout-session" }
+      );
+    }
+
+    const [newPlan] =
+      await stripeModel.getPlanById(value.plan_id);
+    if (!newPlan) {
+      return failure(res, 404, "Plan not found");
+    }
+    if (
+      !isValidStripePriceId(newPlan.stripe_price_id)
+    ) {
+      return failure(res, 400, "Invalid Stripe Price Id");
+    }
+
+    const currentAmount = normalizeAmount(currentSubscription.amount);
+    const newPlanAmount = normalizeAmount(newPlan.price);
+
+    if (newPlanAmount <= currentAmount) {
+      return failure(
+        res,
+        400,
+        "Please select a higher plan to upgrade"
+      );
+    }
+
+    if (
+      newPlan.plan_type === PLAN_TYPES.SINGLE_MONTHLY &&
+      !value.selected_instrument
+    ) {
+      return failure(
+        res,
+        400,
+        "selected_instrument is required for single_monthly plan"
+      );
+    }
+
+    const [user] =
+      await stripeModel.getUserById(userId);
+    if (!user) {
+      return failure(res, 404, "User not found");
+    }
+
+    const instrument =
+      getInstrumentForPlan(
+        newPlan,
+        value.selected_instrument
+      );
+    const session =
+      await stripeService.createSubscriptionCheckoutSession({
+        user,
+        plan: newPlan,
+        selectedInstrument: instrument,
+        metadata: {
+          checkout_flow: "upgrade",
+          previous_subscription_id: String(currentSubscription.id),
+          previous_stripe_subscription_id:
+            currentSubscription.stripe_subscription_id || "",
+        },
+      });
+    return success(res, 200, {
+      message: "Upgrade checkout session created successfully",
+      checkout_url: session.url
+    });
+  } catch (err) {
+    console.log(err);
     return failure(res, 500, "Internal server error");
   }
 };

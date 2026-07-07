@@ -54,10 +54,29 @@ module.exports = {
     return db.query("INSERT INTO user_subscription SET ?", [subscriptionData]);
   },
 
-  createPaymentRecord: async (paymentData) => {
-    console.log("DB insert stripe_payments", paymentData);
-    return db.query("INSERT INTO stripe_payments SET ?", [paymentData]);
+  getLatestAnySubscriptionByUserId: async (userId) => {
+    return db.query(
+      `SELECT *
+       FROM user_subscription
+       WHERE user_id = ?
+       ORDER BY id DESC
+       LIMIT 1`,
+      [userId]
+    );
   },
+
+  // createPaymentRecord: async (paymentData) => {
+  //   console.log("DB insert stripe_payments", paymentData);
+  //   return db.query("INSERT INTO stripe_payments SET ?", [paymentData]);
+  // },
+  updateSubscriptionById: async (id, data) => {
+    return db.query(
+      `UPDATE user_subscription
+       SET ?
+       WHERE id = ?`,
+      [data, id]
+    );
+  },    
 
   getLatestSubscription: async (userId) => {
     return db.query(
@@ -68,16 +87,34 @@ module.exports = {
          AND subscription_status IN (?, ?, ?)
        ORDER BY id DESC
        LIMIT 1`,
-      [userId, 1, "active", "trialing", "past_due"]
+      [userId, 1, "active", "trial", "past_due"]
+    );
+  },
+
+  getLatestCancelableSubscription: async (userId) => {
+    return db.query(
+      `SELECT *
+       FROM user_subscription
+       WHERE user_id = ?
+         AND stripe_subscription_id IS NOT NULL
+         AND stripe_subscription_id <> ''
+         AND (
+           subscription_status IS NULL
+           OR subscription_status NOT IN (?, ?, ?)
+         )
+       ORDER BY id DESC
+       LIMIT 1`,
+      [userId, "cancelled", "canceled", "expired"]
     );
   },
 
   cancelSubscription: async (subscriptionId) => {
     return db.query(
       `UPDATE user_subscription
-       SET subscription_status = ?
+       SET subscription_status = ?,
+           payment_status = ?
        WHERE id = ?`,
-      ["cancelled", subscriptionId]
+      ["cancelled", 0, subscriptionId]
     );
   },
 
@@ -101,13 +138,97 @@ module.exports = {
     );
   },
 
-  getPaymentByInvoiceId: async (stripeInvoiceId) => {
+  // getPaymentByInvoiceId: async (stripeInvoiceId) => {
+  //   return db.query(
+  //     `SELECT id
+  //      FROM stripe_payments
+  //      WHERE stripe_invoice_id = ?
+  //      LIMIT 1`,
+  //     [stripeInvoiceId]
+  //   );
+  // },
+  getSubscriptionByInvoiceId: async (stripeInvoiceId) => {
     return db.query(
-      `SELECT id
-       FROM stripe_payments
+      `SELECT *
+       FROM user_subscription
        WHERE stripe_invoice_id = ?
+       ORDER BY id DESC
        LIMIT 1`,
       [stripeInvoiceId]
     );
   },
+
+  updateUserPaymentStatus: async (userId, paymentStatus) => {
+    return db.query(
+      `UPDATE tbl_users
+       SET payment_status = ?
+       WHERE id = ?`,
+      [paymentStatus, userId]
+    );
+  },
+};
+
+// exports.expireAllActiveSubscriptions = async(userId)=>{
+
+//     return db.query(
+//         `
+//         UPDATE subscriptions
+//         SET
+//             subscription_status='expired',
+//             payment_status=0,
+//             subscription_end_date=NOW()
+//         WHERE user_id=?
+//         AND subscription_status='active'
+//         `,
+//         [userId]
+//     );
+
+// };
+
+// exports.expireSubscription = async (subscriptionId) => {
+//     return db.query(
+//         `
+//         UPDATE subscriptions
+//         SET
+//             subscription_status='expired',
+//             payment_status=0,
+//             subscription_end_date=NOW()
+//         WHERE id=?
+//         `,
+//         [subscriptionId]
+//     );
+
+// };
+
+
+module.exports.expireAllActiveSubscriptions = async(userId)=>{
+
+    return db.query(
+        `
+        UPDATE user_subscription
+        SET
+            subscription_status='expired',
+            payment_status=0,
+            subscription_end_date=NOW()
+        WHERE user_id=?
+        AND subscription_status='active'
+        `,
+        [userId]
+    );
+
+};
+
+module.exports.expireSubscription = async (subscriptionId) => {
+    return db.query(
+        `
+        UPDATE user_subscription
+        SET
+            subscription_status='expired',
+            payment_status=0,
+            subscription_end_date=NOW()
+        WHERE id=?
+        `,
+        [subscriptionId]
+    );
+
 };

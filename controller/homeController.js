@@ -1667,7 +1667,14 @@ exports.get_song = async (req, res) => {
           ? `https://karakover.com/assets/artist/${artist_data.image}`
           : "";
 
-        item.songUrl = `https://api.karakover.com/assets/songs/${item.songs || song_data.track_no}`;
+       const songFile = item.songs || song_data.track_no;
+
+        if (!songFile) {
+          item.songUrl = null;
+          item.error = "Song file not found";
+        } else {
+          item.songUrl = `https://karakover.com/assets/songs/${songFile}`;
+        }
         item.image = base_url + "karokeLogo.png";
 
         item.firstname = userdata[0]?.firstname;

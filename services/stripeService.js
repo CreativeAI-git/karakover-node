@@ -26,11 +26,24 @@ function getWebhookSecret() {
   return requireEnv("STRIPE_WEBHOOK_SECRET");
 }
 
-function buildCheckoutUrls() {
+function getCallbackBaseUrl() {
+  if (process.env.API_URL) {
+    return process.env.API_URL.replace(/\/$/, "");
+  }
+
   const appUrl = requireEnv("APP_URL").replace(/\/$/, "");
-  // const successUrl = `${appUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
-  const successUrl = `${appUrl}/?session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${appUrl}/payment-cancel`;
+
+  if (appUrl.includes("localhost:5173")) {
+    return `http://localhost:${process.env.PORT || 3000}`;
+  }
+
+  return appUrl;
+}
+
+function buildCheckoutUrls() {
+  const callbackBaseUrl = getCallbackBaseUrl();
+  const successUrl = `${callbackBaseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${callbackBaseUrl}/payment-cancel`;
 
   console.log("Success URL:", successUrl);
   console.log("Cancel URL:", cancelUrl);
@@ -41,9 +54,20 @@ function buildCheckoutUrls() {
   };
 }
 
-async function createSubscriptionCheckoutSession({ user, plan, selectedInstrument }) {
+async function createSubscriptionCheckoutSession({
+  user,
+  plan,
+  selectedInstrument,
+  metadata = {},
+}) {
   const stripe = getStripeClient();
   const { successUrl, cancelUrl } = buildCheckoutUrls();
+  const checkoutMetadata = {
+    user_id: String(user.id),
+    plan_id: String(plan.id),
+    selected_instrument: String(selectedInstrument),
+    ...metadata,
+  };
 
   return stripe.checkout.sessions.create({
     mode: "subscription",
@@ -56,17 +80,9 @@ async function createSubscriptionCheckoutSession({ user, plan, selectedInstrumen
     ],
     success_url: successUrl,
     cancel_url: cancelUrl,
-    metadata: {
-      user_id: String(user.id),
-      plan_id: String(plan.id),
-      selected_instrument: String(selectedInstrument),
-    },
+    metadata: checkoutMetadata,
     subscription_data: {
-      metadata: {
-        user_id: String(user.id),
-        plan_id: String(plan.id),
-        selected_instrument: String(selectedInstrument),
-      },
+      metadata: checkoutMetadata,
     },
   });
 }
