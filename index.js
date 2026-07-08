@@ -11,6 +11,7 @@ const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const port = process.env.PORT || 3000;
+const API_URL = process.env.API_URL || 3000;
 const songsPath = process.env.SONGS_PATH || path.join(__dirname, "public/assets/songs");
 const serverSongsPath = process.env.SERVER_SONGS_PATH;
 const shouldLogStaticPaths = process.env.LOG_STATIC_PATHS === "true";
@@ -108,6 +109,6 @@ appex.get("/", (req, res) => {
 
 
 appex.listen(port, function () {
-  console.info(`[server] API listening: http://localhost:${port}`);
+  console.info(`[server] API listening: ${API_URL}`);
 });
 module.exports = appex;

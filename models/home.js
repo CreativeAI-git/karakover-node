@@ -872,6 +872,13 @@ module.exports = {
     return db.query(`SELECT * from tbl_songs  where id = '${song_id}' `);
   },
 
+  get_music_file_by_song_id: async (song_id) => {
+  return db.query(
+    "SELECT master_song FROM tbl_music_files WHERE song_id = ? LIMIT 1",
+    [song_id]
+  );
+},
+
   get_artist_data_artist_id: async (artist_id) => {
     return db.query(`SELECT * from tbl_artists  where id = '${artist_id}' `);
   },

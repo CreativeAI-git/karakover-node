@@ -1,9 +1,26 @@
+require("../utils/env");
+
+const fs=require('fs')
 const multer=require('multer')
 const path=require('path')  
 const hash = require('random-hash'); 
+
+const uploadStorage = process.env.UPLOAD_STORAGE || "local";
+const liveUploadPath = process.env.LIVE_UPLOAD_PATH || "/home/karaoke-app/public/uploads/";
+const localUploadPath = process.env.LOCAL_UPLOAD_PATH || path.join(__dirname, "..", "public", "uploads");
+
+const resolveUploadPath = () => {
+  const uploadPath = uploadStorage === "live" ? liveUploadPath : localUploadPath;
+  return path.isAbsolute(uploadPath)
+    ? uploadPath
+    : path.join(__dirname, "..", uploadPath);
+};
+
 const storage=multer.diskStorage({
   destination: (req,file,cb) => { 
-    cb(null, __basedir + "/public/uploads/");
+    const uploadPath = resolveUploadPath();
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
   },
   filename: (req,file,cb) => {
     let temp = file.originalname.replace(/\s+/g, '').split('.'); //temp[0] +
