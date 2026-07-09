@@ -13,6 +13,7 @@ const fs = require("fs");
 const port = process.env.PORT || 3000;
 const API_URL = process.env.API_URL || 3000;
 const songsPath = process.env.SONGS_PATH || path.join(__dirname, "public/assets/songs");
+// const songsPath = process.env.SONGS_PATH || path.join(__dirname, "public/assets/songs");
 const serverSongsPath = process.env.SERVER_SONGS_PATH;
 const shouldLogStaticPaths = process.env.LOG_STATIC_PATHS === "true";
 

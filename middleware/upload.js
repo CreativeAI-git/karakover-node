@@ -6,8 +6,9 @@ const path=require('path')
 const hash = require('random-hash'); 
 
 const uploadStorage = process.env.UPLOAD_STORAGE || "local";
-const liveUploadPath = process.env.LIVE_UPLOAD_PATH || "/home/karaoke-app/public/uploads/";
-const localUploadPath = process.env.LOCAL_UPLOAD_PATH || path.join(__dirname, "..", "public", "uploads");
+const localUploadPath = path.join(__dirname, "..", "public", "uploads");
+console.log("Path =",localUploadPath)
+
 
 const resolveUploadPath = () => {
   const uploadPath = uploadStorage === "live" ? liveUploadPath : localUploadPath;

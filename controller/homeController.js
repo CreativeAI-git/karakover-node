@@ -52,6 +52,7 @@ const {
 
 const Joi = require("joi");
 const BaseURl = require("../middleware/cofig");
+const apiUrl = (process.env.API_URL || "https://api.karakover.com").replace(/\/$/, "");
 
 const base_url = BaseURl + "/assets/";
 
@@ -59,6 +60,19 @@ const baseurl_songs = base_url + "songs/";
 const baseurl_cover = base_url + "cover/";
 const baseurl_banners = BaseURl + "/assets/mobile_banners/";
 
+const getUploadedSongUrl = (filename) => {
+  if (!filename) return "";
+  const value = String(filename);
+  if (/^https?:\/\//i.test(value)) {
+    const url = new URL(value);
+    return url.pathname.startsWith("/uploads/")
+      ? `${apiUrl}${url.pathname}`
+      : value;
+  }
+
+  const cleanPath = value.replace(/^\/+/, "");
+  return `${apiUrl}/${cleanPath.startsWith("uploads/") ? cleanPath : `uploads/assets/songs/${cleanPath}`}`;
+};
 
 const formatResponse = (list = []) => {
   return list.map(item => ({
@@ -1636,15 +1650,6 @@ exports.get_song = async (req, res) => {
       });
     }
 
-    // 🔹 Step 1: Recorded songs
-    // let get_song = await get_recorded_song(user_id);
-    // console.log("RAW recorded_songs row:", JSON.stringify(get_song[0], null, 2));
-    // // 🔹 Step 2: If NO recorded song → fetch default 5 latest songs
-    // if (!get_song || get_song.length === 0) {
-    //   const subscriptionType = await getUserSubscription(user_id);
-    //   get_song = await getLatestSongsBySubscription(subscriptionType);
-    // }
-
     // Step 1: Recorded songs
     let get_song = await get_recorded_song(user_id);
 
@@ -1681,27 +1686,21 @@ exports.get_song = async (req, res) => {
           ? `https://karakover.com/assets/artist/${artist_data.image}`
           : "";
 
-        // item.songUrl = `http://192.168.1.6:3000/uploads/${item.songs || song_data.track_no}`;
         if (isRecordedSongs) {
           // Recorded song ka existing URL
-          item.songUrl = `http://192.168.1.6:3000/uploads/assets/songs/${item.songs}`;
+          item.songUrl = getUploadedSongUrl(item.songs);
         } else {
           // Default subscription songs
           const [music_file] = await get_music_file_by_song_id(song_data.id);
 
-          item.songUrl = music_file?.master_song
-            ? `http://192.168.1.6:3000/uploads/assets/songs/${music_file.master_song}`
-            : "";
+          item.songUrl = getUploadedSongUrl(music_file?.master_song);
         }
         item.image = base_url + "karokeLogo.png";
 
         item.firstname = userdata[0]?.firstname;
         item.lastname = userdata[0]?.lastname;
         item.email = userdata[0]?.email;
-        console.log("song_data =", song_data);
-        console.log("song_data.track =", song_data.track);
-        console.log("song_data.track_no =", song_data.track_no);
-        console.log("item =", item);
+        item.isRecorded = isRecordedSongs;
       })
     );
     return res.json({

@@ -1,11 +1,13 @@
-const { fetchAlluser,fetchUserById, addUser,fetchUserByEmail,
-    updateUserById,deleteUser} = require('../models/users');
+const { fetchAlluser, fetchUserById, addUser, fetchUserByEmail,
+    updateUserById, deleteUser } = require('../models/users');
 
 const Joi = require('joi');
 const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const saltRounds = 10;
+
+const API_URL = process.env.API_URL || "http://192.168.1.6:3000";
 
 const moment = require('moment');
 // const fs = require('fs');
@@ -30,25 +32,25 @@ var transporter = nodemailer.createTransport({
 });
 
 exports.allUsers = (async (req, res) => {
-    try {       
-           const results = await fetchAlluser();
-            if (results.length > 0) {              
-                return res.json({
-                    message: "fetch user details success",
-                    status: 200,
-                    success: true,
-                    data: results
-                })
-            }
-            else {
-                return res.json({
-                    message: "fetch details failed",
-                    status: 400,
-                    success: false,
-                    data: []
-                })
-            }
-        
+    try {
+        const results = await fetchAlluser();
+        if (results.length > 0) {
+            return res.json({
+                message: "fetch user details success",
+                status: 200,
+                success: true,
+                data: results
+            })
+        }
+        else {
+            return res.json({
+                message: "fetch details failed",
+                status: 400,
+                success: false,
+                data: []
+            })
+        }
+
     } catch (error) {
         console.log(error)
         return res.json({
@@ -62,15 +64,15 @@ exports.allUsers = (async (req, res) => {
 
 exports.addUser = (async (req, res) => {
     try {
-         var CurrentDate = moment().format();
-        const { email, firstname, lastname, password,phone } = req.body;
-       // const actToken = betweenRandomNumber(10000000, 99999999);
+        var CurrentDate = moment().format();
+        const { email, firstname, lastname, password, phone } = req.body;
+        // const actToken = betweenRandomNumber(10000000, 99999999);
         const schema = Joi.alternatives(
             Joi.object({
                 email: Joi.string()
                     .min(5)
                     .max(255)
-                    .email({tlds: { allow: false } })
+                    .email({ tlds: { allow: false } })
                     .lowercase()
                     .required(),
                 password: Joi.string().min(5).max(10).required().messages({
@@ -87,8 +89,8 @@ exports.addUser = (async (req, res) => {
                     "string.empty": "lastname can't be empty",
                     "string.required": "lastname is required",
                 }),
-                phone: [Joi.number().empty().required(),Joi.string().empty().required()]
-                
+                phone: [Joi.number().empty().required(), Joi.string().empty().required()]
+
             })
         );
         const result = schema.validate(req.body);
@@ -103,16 +105,15 @@ exports.addUser = (async (req, res) => {
                 success: false,
             });
         }
-          else 
-        {
+        else {
             const result = await fetchUserByEmail(email);
 
             let filename = '';
-            if(req.file) {
+            if (req.file) {
                 const file = req.file
                 filename = file.filename;
             }
-         
+
             if (result.length === 0) {
                 bcrypt.genSalt(saltRounds, async function (err, salt) {
                     bcrypt.hash(password, salt, async function (err, hash) {
@@ -121,39 +122,39 @@ exports.addUser = (async (req, res) => {
                         let user = {
                             email: email,
                             password: hash,
-                            firstname:firstname,
-                            lastname:lastname,
-                            phone:phone,
+                            firstname: firstname,
+                            lastname: lastname,
+                            phone: phone,
                             // act_token: actToken,
-                            created_at:CurrentDate,
-                            image:filename
+                            created_at: CurrentDate,
+                            image: filename
                         }
                         const result = await addUser(user);
 
-                        if (result.affectedRows > 0 ) {               
+                        if (result.affectedRows > 0) {
                             return res.json({
                                 success: true,
-                                message: "Your account has been successfully created.", 
-                                userinfo: [{id:result.insertId}],
+                                message: "Your account has been successfully created.",
+                                userinfo: [{ id: result.insertId }],
                                 status: 200
                             });
                         } else {
                             return res.json({
                                 message: "user failed to register",
                                 status: 400,
-                                userinfo:[],
+                                userinfo: [],
                                 success: false
                             })
                         }
                     });
                 });
 
-             } else {
+            } else {
                 return res.json({
                     success: false,
                     message: "Already Exists",
                     status: 400,
-                    userinfo:[],
+                    userinfo: [],
                 });
             }
 
@@ -168,82 +169,92 @@ exports.addUser = (async (req, res) => {
     }
 });
 
-exports.editProfile =  ( async (req, res) => {
-    try{
+exports.editProfile = (async (req, res) => {
+    try {
 
-           const { email, firstname, lastname, phone, user_id } = req.body;
-           const schema = Joi.alternatives(
-               Joi.object({
-                   email: [Joi.number().empty(),Joi.string().empty()],
-                   firstname: [Joi.number().empty(),Joi.string().empty()],
-                   lastname: [Joi.number().empty(),Joi.string().empty()],
-                   phone: [Joi.number().optional().allow(''),Joi.string().optional().allow('')],                 
-                   user_id: [Joi.number().empty(),Joi.string().empty()],             
-               })
-           );
-           const result = schema.validate({ email, firstname, lastname, phone, user_id});
-   
-           if (result.error) {
-               const message = result.error.details.map((i) => i.message).join(",");
-               return res.json({
-                   message: result.error.details[0].message,
-                   error: message,
-                   missingParams: result.error.details[0].message,
-                   status: 400,   
-                   success: false,
-               });
-           } else {
-           
+        const { email, firstname, lastname, phone, user_id } = req.body;
+        const schema = Joi.alternatives(
+            Joi.object({
+                email: [Joi.number().empty(), Joi.string().empty()],
+                firstname: [Joi.number().empty(), Joi.string().empty()],
+                lastname: [Joi.number().empty(), Joi.string().empty()],
+                phone: [Joi.number().optional().allow(''), Joi.string().optional().allow('')],
+                user_id: [Joi.number().empty(), Joi.string().empty()],
+            })
+        );
+        const result = schema.validate({ email, firstname, lastname, phone, user_id });
+
+        if (result.error) {
+            const message = result.error.details.map((i) => i.message).join(",");
+            return res.json({
+                message: result.error.details[0].message,
+                error: message,
+                missingParams: result.error.details[0].message,
+                status: 400,
+                success: false,
+            });
+        } else {
+
             let filename = '';
-            if(req.file) {
+            if (req.file) {
                 const file = req.file
                 filename = file.filename;
             }
-        
-               const userInfo = await fetchUserById(user_id);
-               if (userInfo.length !== 0) {
-                   let user = {
-                       email: email ? email : userInfo[0].email,
-                       firstname: firstname ? firstname : userInfo[0].firstname,
-                       lastname: lastname ? lastname : userInfo[0].lastname,
-                       phone: phone ? phone : userInfo[0].phone,
-                       image:filename?filename : userInfo[0].image,
-                   };
-                   const result = await updateUserById(user, user_id);
-                   if (result.affectedRows) {
-                       return res.json({
-                           message: "update user successfully",
-                           status: 200,
-                           success: true
-                       })
-                   }
-                   else {
-                       return res.json({
-                           message: "update user failed ",
-                           status: 400,
-                           success: false
-                       })
-                   }
-               }
-               else {
-                   return res.json({
-                       messgae: "data not found",
-                       status: 400,
-                       success: false
-                   })
-               }
-           }
-       } catch(err) {
+
+            const userInfo = await fetchUserById(user_id);
+            if (userInfo.length !== 0) {
+                let user = {
+                    email: email ? email : userInfo[0].email,
+                    firstname: firstname ? firstname : userInfo[0].firstname,
+                    lastname: lastname ? lastname : userInfo[0].lastname,
+                    phone: phone ? phone : userInfo[0].phone,
+                    image: filename ? filename : userInfo[0].image,
+                };
+                const result = await updateUserById(user, user_id);
+                if (result.affectedRows) {
+
+                    const updatedUser = await fetchUserById(user_id);
+
+                    if (updatedUser.length) {
+                        if (updatedUser[0].image) {
+                            updatedUser[0].image = `${API_URL}/uploads/${updatedUser[0].image}`;
+                        }
+                    }
+
+                    return res.json({
+                        message: "update user successfully",
+                        status: 200,
+                        success: true,
+                        data: updatedUser[0]
+                    });
+                }
+                else {
+                    return res.json({
+                        message: "update user failed ",
+                        status: 400,
+                        success: false
+                    })
+                }
+            }
+            else {
+                return res.json({
+                    messgae: "data not found",
+                    status: 400,
+                    success: false
+                })
+            }
+        }
+    } catch (err) {
         console.log(err);
 
-           return res.json({
-               success: false,
-               message: "Internal server error",
-               error: err,
-               status: 500
-           })
-       }
-   
+        return res.json({
+            success: false,
+            message: "Internal server error",
+            error: err,
+            status: 500
+        })
+    }
+
 });
 
 exports.userProfile = (async (req, res) => {
@@ -273,13 +284,17 @@ exports.userProfile = (async (req, res) => {
         else {
             const results = await fetchUserById(user_id);
             if (results.length !== 0) {
-               
+
+                if (results[0].image) {
+                    results[0].image = `${API_URL}/uploads/${results[0].image}`;
+                }
+
                 return res.json({
                     message: "fetch user details success",
                     status: 200,
                     success: true,
                     data: results[0]
-                })
+                });
             }
             else {
                 return res.json({
@@ -298,7 +313,7 @@ exports.userProfile = (async (req, res) => {
         })
     }
 });
- 
+
 exports.deleteUser = (async (req, res) => {
     try {
         const { user_id } = req.body;
@@ -326,7 +341,7 @@ exports.deleteUser = (async (req, res) => {
         else {
             const results = await deleteUser(user_id);
             if (results.affectedRows > 0) {
-               
+
                 return res.json({
                     message: "Delete user detail success",
                     status: 200,

@@ -7,6 +7,21 @@ const base_url = BaseURl + "/assets/";
 const baseurl_cover = base_url + "albums/";
 const baseurl_cover01 = base_url + "cover/";
 const baseurl_instrument = base_url + "instrument/";
+const apiUrl = (process.env.API_URL || "https://api.karakover.com").replace(/\/$/, "");
+
+const getUploadedSongUrl = (filename) => {
+  if (!filename) return "";
+  const value = String(filename);
+  if (/^https?:\/\//i.test(value)) {
+    const url = new URL(value);
+    return url.pathname.startsWith("/uploads/")
+      ? `${apiUrl}${url.pathname}`
+      : value;
+  }
+
+  const cleanPath = value.replace(/^\/+/, "");
+  return `${apiUrl}/${cleanPath.startsWith("uploads/") ? cleanPath : `uploads/assets/songs/${cleanPath}`}`;
+};
 
 exports.redirectToPP = async (req, res) => {
   const privacyPolicy = await fetchPrivacyPolicy();
@@ -1459,6 +1474,7 @@ exports.uploadSong = async (req, res) => {
         // const file = req.file;
         filename = req.file.filename;
       }
+      const songUrl = getUploadedSongUrl(filename);
       const results = await recorded_songs({
         user_id: user_id,
         songs: filename,
@@ -1470,6 +1486,8 @@ exports.uploadSong = async (req, res) => {
           status: 200,
           success: true,
           data: results,
+          filename: filename,
+          songUrl: songUrl,
           totalsongs: results.length,
         });
       } else {

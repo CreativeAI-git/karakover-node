@@ -5,6 +5,21 @@ const pool = require('../../utils/database');
 const { handleSuccess, handleError, joiErrorHandle } = require('../../utils/responseHandler');
 const Joi = require('joi');
 
+const apiUrl = (process.env.API_URL || "https://api.karakover.com").replace(/\/$/, "");
+
+const getUploadUrl = (filename) => {
+    if (!filename) return "";
+    const value = String(filename);
+    if (/^https?:\/\//i.test(value)) {
+        const url = new URL(value);
+        return url.pathname.startsWith("/uploads/")
+            ? `${apiUrl}${url.pathname}`
+            : value;
+    }
+
+    const cleanPath = value.replace(/^\/+/, "");
+    return `${apiUrl}/${cleanPath.startsWith("uploads/") ? cleanPath : `uploads/${cleanPath}`}`;
+};
 
 exports.createNotification = async (req, res) => {
     try {
@@ -53,7 +68,7 @@ exports.getAllNotifications = async (req, res) => {
                 !notification.notification_image.startsWith("http") &&
                 !notification.notification_image.startsWith("No image")
             ) {
-                notification.notification_image = `${process.env.APP_URL}${notification.notification_image}`;
+                notification.notification_image = getUploadUrl(notification.notification_image);
             }
             return notification;
         });
@@ -76,7 +91,7 @@ exports.getAllNotifications_all = async (req, res) => {
                 !notification.notification_image.startsWith("http") &&
                 !notification.notification_image.startsWith("No image")
             ) {
-                notification.notification_image = `${process.env.APP_URL}${notification.notification_image}`;
+                notification.notification_image = getUploadUrl(notification.notification_image);
             }
             return notification;
         });
@@ -99,7 +114,7 @@ exports.getAllSentNotifications = async (req, res) => {
                 !notification.notification_image.startsWith("http") &&
                 !notification.notification_image.startsWith("No image")
             ) {
-                notification.notification_image = `${process.env.APP_URL}${notification.notification_image}`;
+                notification.notification_image = getUploadUrl(notification.notification_image);
             }
             return notification;
         });
@@ -125,7 +140,7 @@ exports.getNotificationById = async (req, res) => {
             !notification.notification_image.startsWith("http") &&
             !notification.notification_image.startsWith("No image")
         ) {
-            notification.notification_image = `${process.env.APP_URL}${notification.notification_image}`;
+            notification.notification_image = getUploadUrl(notification.notification_image);
         }
         return handleSuccess(res, 200, 'Notification fetched successfully.', notification);
     } catch (error) {

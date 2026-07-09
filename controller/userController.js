@@ -47,11 +47,26 @@ const localStorage = require("localStorage");
 const { fetchPromoStatus } = require("../models/home");
 
 const appUrl = (process.env.APP_URL || "https://api.karakover.com").replace(/\/$/, "");
+const apiUrl = (process.env.API_URL || "https://api.karakover.com").replace(/\/$/, "");
 const smtpUser = process.env.SMTP_USER;
 const smtpPass = process.env.SMTP_PASS || "";
 const mailFrom = process.env.MAIL_FROM || smtpUser;
 const jwtSecret = process.env.JWT_SECRET;
 const mailDebug = process.env.MAIL_DEBUG === "true";
+
+const getUploadUrl = (filename) => {
+  if (!filename) return "";
+  const value = String(filename);
+  if (/^https?:\/\//i.test(value)) {
+    const url = new URL(value);
+    return url.pathname.startsWith("/uploads/")
+      ? `${apiUrl}${url.pathname}`
+      : value;
+  }
+
+  const cleanPath = value.replace(/^\/+/, "");
+  return `${apiUrl}/${cleanPath.startsWith("uploads/") ? cleanPath : `uploads/${cleanPath}`}`;
+};
 
 /** Sync */
 function randomStringAsBase64Url(size) {
@@ -191,9 +206,7 @@ exports.signup = async (req, res) => {
 
                   //fetch user details
                   if (result[0]["image"] != "") {
-                    profileImage =
-                      `${appUrl}/uploads/` +
-                      result[0]["image"];
+                    profileImage = getUploadUrl(result[0]["image"]);
                     // "https://api.karakover.com/uploads/" +
                     // result[0]["image"];
                   } else {
@@ -344,7 +357,7 @@ exports.login = async (req, res) => {
     // Profile image
     let profileImage = "";
     if (user.image && user.image !== "") {
-      profileImage = `${appUrl}/uploads/` + user.image;
+      profileImage = getUploadUrl(user.image);
     }
     user.image = profileImage;
 
@@ -791,8 +804,7 @@ exports.userProfile = async (req, res) => {
         if (results[0]["image"] === null) {
           profileImage = "";
         } else {
-          profileImage =
-            `${appUrl}/uploads/` + results[0]["image"];
+          profileImage = getUploadUrl(results[0]["image"]);
           // "https://api.karakover.com/uploads/" + result[0]["image"];
         }
 
@@ -854,7 +866,7 @@ exports.sociallogin = async (req, res) => {
       });
     } else {
       const result = await fetchUserbysocial(email, social);
-      const usersemail = await fetchUser(email);
+      const usersemail = await fetchUserByEmail(email);
 
       if (result.length != 0) {
         const token = jwt.sign(
@@ -918,6 +930,7 @@ exports.sociallogin = async (req, res) => {
       }
     }
   } catch (error) {
+    console.log(error)
     return res.json({
       success: false,
       message: "Internal server error",
