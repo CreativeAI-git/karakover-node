@@ -46,8 +46,10 @@ var base64url = require("base64url");
 const localStorage = require("localStorage");
 const { fetchPromoStatus } = require("../models/home");
 
-const appUrl = (process.env.APP_URL || "https://api.karakover.com").replace(/\/$/, "");
-const apiUrl = (process.env.API_URL || "https://api.karakover.com").replace(/\/$/, "");
+// const appUrl = (process.env.APP_URL || "https://api.karakover.com").replace(/\/$/, "");
+const appUrl = (process.env.APP_URL || "http://192.168.1.6:3000/").replace(/\/$/, "");
+// const apiUrl = (process.env.API_URL || "https://api.karakover.com").replace(/\/$/, "");
+const API_URL = (process.env.API_URL || "http://192.168.1.6:3000/").replace(/\/$/, "");
 const smtpUser = process.env.SMTP_USER;
 const smtpPass = process.env.SMTP_PASS || "";
 const mailFrom = process.env.MAIL_FROM || smtpUser;
@@ -185,7 +187,7 @@ exports.signup = async (req, res) => {
                                          <div align="center"></div>
                                          <p></p>
                                          <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
-                                         <p style="color:#333"> Please <a href="${appUrl}/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
+                                         <p style="color:#333"> Please <a href="${API_URL}/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
                                       </center>
                                    </td>
                                 </tr>
@@ -637,7 +639,7 @@ exports.forgetPassword = async (req, res) => {
         <tr>
           <td align="center" style="padding:50px 20px 10px;">
  
-            <img src="${appUrl}/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
+            <img src="${API_URL}/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
             <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
                        font-size:20px;color:#fff;">
               Reset Your Password
@@ -658,7 +660,7 @@ exports.forgetPassword = async (req, res) => {
         <!-- Button -->
         <tr>
           <td align="center" style="padding:20px 20px 50px;">
-            <a href="${appUrl}/verifyPassword/${token}"
+            <a href="${API_URL}/verifyPassword/${token}"
                style="display:inline-block;
                       padding:14px 28px;
                       background:#0D8EC5;
