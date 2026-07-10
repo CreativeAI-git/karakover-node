@@ -338,7 +338,7 @@ exports.login = async (req, res) => {
       return res.json({
         message: "Please verify your account first",
         success: false,
-        status: 400,
+        status: 203,
         token: "",
         userinfo: [],
       });
