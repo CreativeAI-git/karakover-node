@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const saltRounds = 10;
 
-const API_URL = process.env.API_URL || "http://192.168.1.6:3000";
+const API_URL = process.env.API_URL || "http://192.168.1.128:3000";
 
 const moment = require('moment');
 // const fs = require('fs');
