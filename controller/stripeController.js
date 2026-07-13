@@ -3,15 +3,18 @@ const moment = require("moment");
 
 const stripeModel = require("../models/stripeModel");
 const stripeService = require("../services/stripeService");
+const BaseURl = require("../middleware/cofig");
 
 const PLAN_TYPES = {
   SINGLE_MONTHLY: "single_monthly",
+  SINGLE_YEARLY: "single_yearly",
   FULL_MONTHLY: "full_monthly",
   FULL_YEARLY: "full_yearly",
 };
 
 const FULL_ACCESS_INSTRUMENT_ID = 5;
 const VALID_INSTRUMENT_IDS = [1, 2, 3, 4, 5];
+const baseurl_instrument = `${BaseURl}/assets/instrument/`;
 
 function success(res, statusCode, body) {
   return res.status(statusCode).json({
@@ -166,12 +169,39 @@ function getPlanDays(plan) {
   return 30;
 }
 
+function getPlanText(plan) {
+  return [
+    plan.plan_type,
+    plan.plan_name,
+    plan.instrument_access,
+    plan.title,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isFullAccessPlan(plan) {
+  const numericAccess = Number(plan.instrument_access);
+  const planText = getPlanText(plan);
+
+  return (
+    numericAccess === FULL_ACCESS_INSTRUMENT_ID ||
+    planText.includes("full") ||
+    planText.includes("all")
+  );
+}
+
+function requiresSelectedInstrument(plan) {
+  return !isFullAccessPlan(plan);
+}
+
 function getInstrumentForPlan(plan, selectedInstrument) {
-  if (plan.plan_type === PLAN_TYPES.SINGLE_MONTHLY) {
-    return selectedInstrument;
+  if (isFullAccessPlan(plan)) {
+    return FULL_ACCESS_INSTRUMENT_ID;
   }
 
-  return FULL_ACCESS_INSTRUMENT_ID;
+  return selectedInstrument;
 }
 
 function getSubscriptionNameForPlan(plan) {
@@ -244,8 +274,48 @@ function isActiveLocalSubscription(subscription) {
   return Boolean(
     subscription &&
       Number(subscription.payment_status) === 1 &&
-      ["active", "trial", "past_due"].includes(subscription.subscription_status)
+      (
+        !subscription.subscription_status ||
+        ["active", "trial", "past_due"].includes(subscription.subscription_status)
+      )
   );
+}
+
+function isAlreadyCancelledStripeError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    error?.code === "resource_missing" ||
+    message.includes("no such subscription") ||
+    message.includes("already canceled") ||
+    message.includes("already cancelled")
+  );
+}
+
+function buildInstrumentImageUrl(image) {
+  if (!image) {
+    return "";
+  }
+
+  const value = String(image);
+  return /^https?:\/\//i.test(value) ? value : baseurl_instrument + value;
+}
+
+function formatSubscriptionResponse(subscription) {
+  if (!subscription) {
+    return null;
+  }
+
+  return {
+    ...subscription,
+    instrument_id: subscription.instrument_selected || null,
+    instrument_name: subscription.instrument_name || null,
+    instrument_image: buildInstrumentImageUrl(subscription.instrument_image),
+    instrument: {
+      id: subscription.instrument_selected || null,
+      name: subscription.instrument_name || null,
+      image: buildInstrumentImageUrl(subscription.instrument_image),
+    },
+  };
 }
 
 function buildSubscriptionData({
@@ -725,14 +795,22 @@ exports.createCheckoutSession = async (req, res) => {
       );
     }
 
+    if (requiresSelectedInstrument(plan) && !value.selected_instrument) {
+      return failure(
+        res,
+        400,
+        "selected_instrument is required for single instrument plan"
+      );
+    }
+
     if (
-      plan.plan_type === PLAN_TYPES.SINGLE_MONTHLY &&
-      !value.selected_instrument
+      !isFullAccessPlan(plan) &&
+      value.selected_instrument === FULL_ACCESS_INSTRUMENT_ID
     ) {
       return failure(
         res,
         400,
-        "selected_instrument is required for single_monthly plan"
+        "Full Access instrument can only be used with Full Access plan"
       );
     }
 
@@ -874,7 +952,7 @@ exports.getSubscriptionStatus = async (req, res) => {
       action: isActiveLocalSubscription(subscription)
         ? "upgrade-subscription"
         : "create-checkout-session",
-      subscription: subscription || null,
+      subscription: formatSubscriptionResponse(subscription),
     });
   } catch (error) {
     console.error("getSubscriptionStatus error:", error);
@@ -916,11 +994,34 @@ exports.cancelSubscription = async (req, res) => {
     if (!subscription.stripe_subscription_id) {
       return failure(res, 400, "Subscription is missing Stripe subscription id");
     }
-    await stripeService.cancelSubscription(subscription.stripe_subscription_id);
+
+    try {
+      await stripeService.cancelSubscription(subscription.stripe_subscription_id);
+    } catch (stripeError) {
+      if (!isAlreadyCancelledStripeError(stripeError)) {
+        throw stripeError;
+      }
+
+      console.log("Stripe subscription already cancelled, syncing local status", {
+        subscription_id: subscription.id,
+        stripe_subscription_id: subscription.stripe_subscription_id,
+      });
+    }
+
     await stripeModel.cancelSubscription(subscription.id);
     await stripeModel.updateUserPaymentStatus(userId, 0);
     return success(res, 200, {
       message: "Subscription cancelled successfully",
+      subscription: {
+        id: subscription.id,
+        plan_id: subscription.plan_id,
+        instrument_id: subscription.instrument_selected,
+        instrument_selected: subscription.instrument_selected,
+        instrument_name: subscription.instrument_name || null,
+        instrument_image: buildInstrumentImageUrl(subscription.instrument_image),
+        subscription_status: "cancelled",
+        payment_status: 0,
+      },
     });
   } catch (error) {
     console.error("cancelSubscription error:", error);
@@ -981,14 +1082,25 @@ exports.upgradeSubscription = async (req, res) => {
       );
     }
 
+    const requestedInstrument =
+      value.selected_instrument || currentSubscription.instrument_selected;
+
+    if (requiresSelectedInstrument(newPlan) && !requestedInstrument) {
+      return failure(
+        res,
+        400,
+        "selected_instrument is required for single instrument plan"
+      );
+    }
+
     if (
-      newPlan.plan_type === PLAN_TYPES.SINGLE_MONTHLY &&
-      !value.selected_instrument
+      !isFullAccessPlan(newPlan) &&
+      requestedInstrument === FULL_ACCESS_INSTRUMENT_ID
     ) {
       return failure(
         res,
         400,
-        "selected_instrument is required for single_monthly plan"
+        "Full Access instrument can only be used with Full Access plan"
       );
     }
 
@@ -1001,7 +1113,7 @@ exports.upgradeSubscription = async (req, res) => {
     const instrument =
       getInstrumentForPlan(
         newPlan,
-        value.selected_instrument
+        requestedInstrument
       );
     const session =
       await stripeService.createSubscriptionCheckoutSession({
@@ -1009,6 +1121,9 @@ exports.upgradeSubscription = async (req, res) => {
         plan: newPlan,
         selectedInstrument: instrument,
         metadata: {
+          user_id: String(userId),
+          plan_id: String(newPlan.id),
+          selected_instrument: String(instrument),
           checkout_flow: "upgrade",
           previous_subscription_id: String(currentSubscription.id),
           previous_stripe_subscription_id:

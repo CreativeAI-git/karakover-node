@@ -12,7 +12,42 @@ module.exports = {
 
   fetchLatestPaidSubscriptionByUserId: async (userId) => {
     return db.query(
-      "SELECT id, user_id, instrument_selected, amount, payment_status, subscription_name, subscription_start_date, subscription_end_date, subscription_days, created_at, updated_at FROM user_subscription WHERE user_id = ? AND payment_status = 1 ORDER BY subscription_start_date DESC, updated_at DESC, id DESC LIMIT 1",
+      `SELECT
+         us.id,
+         us.user_id,
+         us.plan_id,
+         us.instrument_selected,
+         us.amount,
+         us.payment_status,
+         us.subscription_name,
+         us.subscription_status,
+         us.subscription_start_date,
+         us.subscription_end_date,
+         us.subscription_days,
+         us.created_at,
+         us.updated_at,
+         tp.plan_name,
+         tp.plan_type,
+         tp.instrument_access,
+         ti.instrument AS instrument_name,
+         ti.image AS instrument_image
+       FROM user_subscription us
+       LEFT JOIN tbl_plans tp
+         ON us.plan_id = tp.id
+       LEFT JOIN tbl_instruments ti
+         ON us.instrument_selected = ti.id
+       WHERE us.user_id = ?
+         AND us.payment_status = 1
+         AND (
+           us.subscription_status IS NULL
+           OR us.subscription_status IN ('active', 'trial', 'past_due')
+         )
+         AND (
+           us.subscription_end_date IS NULL
+           OR us.subscription_end_date >= NOW()
+         )
+       ORDER BY us.subscription_start_date DESC, us.updated_at DESC, us.id DESC
+       LIMIT 1`,
       [userId]
     );
   },

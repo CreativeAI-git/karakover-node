@@ -45,11 +45,13 @@ var crypto = require("crypto");
 var base64url = require("base64url");
 const localStorage = require("localStorage");
 const { fetchPromoStatus } = require("../models/home");
+const BaseURl = require("../middleware/cofig");
 
 // const appUrl = (process.env.APP_URL || "https://api.karakover.com").replace(/\/$/, "");
 const appUrl = (process.env.APP_URL || "http://192.168.1.128:3000").replace(/\/$/, "");
 // const apiUrl = (process.env.API_URL || "https://api.karakover.com").replace(/\/$/, "");
 const apiUrl = (process.env.API_URL || "http://192.168.1.128:3000").replace(/\/$/, "");
+const baseurl_instrument = `${BaseURl}/assets/instrument/`;
 const smtpUser = process.env.SMTP_USER;
 const smtpPass = process.env.SMTP_PASS || "";
 const mailFrom = process.env.MAIL_FROM || smtpUser;
@@ -68,6 +70,12 @@ const getUploadUrl = (filename) => {
 
   const cleanPath = value.replace(/^\/+/, "");
   return `${apiUrl}/${cleanPath.startsWith("uploads/") ? cleanPath : `uploads/${cleanPath}`}`;
+};
+
+const getInstrumentImageUrl = (filename) => {
+  if (!filename) return "";
+  const value = String(filename);
+  return /^https?:\/\//i.test(value) ? value : baseurl_instrument + value;
 };
 
 /** Sync */
@@ -163,7 +171,6 @@ exports.signup = async (req, res) => {
         bcrypt.genSalt(saltRounds, async function (err, salt) {
           bcrypt.hash(password, salt, async function (err, hash) {
             if (err) throw err;
-
             let user = {
               email: email,
               password: hash,
@@ -174,7 +181,6 @@ exports.signup = async (req, res) => {
               created_at: CurrentDate,
             };
             const result = await addUser(user);
-
             if (result.affectedRows > 0) {
               let mailOptions = {
                 from: mailFrom,
@@ -193,9 +199,7 @@ exports.signup = async (req, res) => {
                                 </tr>
                              </table>`,
               };
-
               console.log("Signup SMTP user:", smtpUser);
-
               transporter.sendMail(mailOptions, async function (error, info) {
                 if (error) {
                   console.error("Signup mail error:", error);
@@ -449,17 +453,30 @@ exports.getSubscriptionStatus = async (req, res) => {
         days_left: daysLeft,
         subscription: paidSub
           ? {
-              id: paidSub.id,
-              instrument_selected: paidSub.instrument_selected,
-              amount: paidSub.amount,
-              payment_status: paidSub.payment_status,
-              subscription_name: paidSub.subscription_name,
-              subscription_start_date: paidSub.subscription_start_date,
-              subscription_end_date: paidSub.subscription_end_date,
-              subscription_days: paidSub.subscription_days,
-              created_at: paidSub.created_at,
-              updated_at: paidSub.updated_at,
-            }
+            id: paidSub.id,
+            plan_id: paidSub.plan_id,
+            plan_name: paidSub.plan_name,
+            plan_type: paidSub.plan_type,
+            instrument_access: paidSub.instrument_access,
+            instrument_id: paidSub.instrument_selected,
+            instrument_selected: paidSub.instrument_selected,
+            instrument_name: paidSub.instrument_name,
+            instrument_image: getInstrumentImageUrl(paidSub.instrument_image),
+            instrument: {
+              id: paidSub.instrument_selected,
+              name: paidSub.instrument_name || null,
+              image: getInstrumentImageUrl(paidSub.instrument_image),
+            },
+            amount: paidSub.amount,
+            payment_status: paidSub.payment_status,
+            subscription_status: paidSub.subscription_status,
+            subscription_name: paidSub.subscription_name,
+            subscription_start_date: paidSub.subscription_start_date,
+            subscription_end_date: paidSub.subscription_end_date,
+            subscription_days: paidSub.subscription_days,
+            created_at: paidSub.created_at,
+            updated_at: paidSub.updated_at,
+          }
           : null,
       },
     });
@@ -482,10 +499,8 @@ exports.verifyUser = async (req, res) => {
       return res.status(400).send("Invalid link");
     } else {
       const result = await fetchUserToken(token);
-
       if (result.rowCount != 0) {
         //const resultUpdate = await updVerifyUser(token);
-
         if (resultUpdate.rowCount) {
           res.render(path.join(__dirname + "/view/verify.ejs"), { msg: "" });
         } else {
@@ -530,7 +545,6 @@ exports.editProfile = async (req, res) => {
       phone,
       user_id,
     });
-
     if (result.error) {
       const message = result.error.details.map((i) => i.message).join(",");
       return res.json({
@@ -546,7 +560,6 @@ exports.editProfile = async (req, res) => {
         const file = req.file;
         filename = file.filename;
       }
-
       const userInfo = await fetchUserById(user_id);
       if (userInfo.length !== 0) {
         let user = {
@@ -572,7 +585,7 @@ exports.editProfile = async (req, res) => {
         }
       } else {
         return res.json({
-          messgae: "data not found",
+          message: "data not found",
           status: 400,
           success: false,
         });
@@ -580,7 +593,6 @@ exports.editProfile = async (req, res) => {
     }
   } catch (err) {
     console.log(err);
-
     return res.json({
       success: false,
       message: "Internal server error",
@@ -602,7 +614,6 @@ exports.forgetPassword = async (req, res) => {
       })
     );
     const result = schema.validate(req.body);
-
     if (result.error) {
       const message = result.error.details.map((i) => i.message).join(",");
       return res.json({
@@ -614,70 +625,141 @@ exports.forgetPassword = async (req, res) => {
       });
     } else {
       const result = await fetchUserByEmail(email);
-
       if (result.length != 0) {
         const genToken = randomStringAsBase64Url(20);
         await updateUser(genToken, email);
-
         const result = await fetchUserByEmail(email);
-
         let token = result[0].token;
+        //       let mailOptions = {
+        //         from: mailFrom,
+        //         to: email,
+        //         subject: "Forgot Password",
+        //         html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;">
+        // <tr>
+        //   <td align="center">
+        //     <!-- Email Container -->
+        //     <table width="100%" cellpadding="0" cellspacing="0" border="0"
+        //            style="max-width:600px;background:#333;border-radius:8px;
+        //                   box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+        //       <!-- Header -->
+        //       <tr>
+        //         <td align="center" style="padding:50px 20px 10px;">
+        //           <img src="${apiUrl}/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
+        //           <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
+        //                      font-size:20px;color:#fff;">
+        //             Reset Your Password
+        //           </h1>
+        //         </td>
+        //       </tr>
+        //       <!-- Subtext -->
+        //       <tr>
+        //         <td align="center" style="padding:0 30px 20px;">
+        //           <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+        //                     font-size:15px;color:#fff;line-height:1.6;">
+        //            Please click below link to change password
+        //           </p>
+        //         </td>
+        //       </tr>
+        //       <!-- Button -->
+        //       <tr>
+        //         <td align="center" style="padding:20px 20px 50px;">
+        //           <a href="${apiUrl}/verifyPassword/${token}"
+        //              style="display:inline-block;
+        //                     padding:14px 28px;
+        //                     background:#0D8EC5;
+        //                     color:#ffffff;
+        //                     text-decoration:none;
+        //                     font-family:Arial,Helvetica,sans-serif;
+        //                     font-size:16px;
+        //                     font-weight:bold;
+        //                     border-radius:6px;">
+        //             Change Password
+        //           </a>
+        //         </td>
+        //       </tr>
+        //     </table>`,
+        //       };
+
         let mailOptions = {
           from: mailFrom,
           to: email,
           subject: "Forgot Password",
-          html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;">
-  <tr>
-    <td align="center">
- 
-      <!-- Email Container -->
-      <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="max-width:600px;background:#333;border-radius:8px;
-                    box-shadow:0 8px 24px rgba(0,0,0,0.08);">
- 
-        <!-- Header -->
-        <tr>
-          <td align="center" style="padding:50px 20px 10px;">
- 
-            <img src="${apiUrl}/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
-            <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
-                       font-size:20px;color:#fff;">
-              Reset Your Password
-            </h1>
-          </td>
-        </tr>
- 
-        <!-- Subtext -->
-        <tr>
-          <td align="center" style="padding:0 30px 20px;">
-            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
-                      font-size:15px;color:#fff;line-height:1.6;">
-             Please click below link to change password
-            </p>
-          </td>
-        </tr>
- 
-        <!-- Button -->
-        <tr>
-          <td align="center" style="padding:20px 20px 50px;">
-            <a href="${apiUrl}/verifyPassword/${token}"
-               style="display:inline-block;
-                      padding:14px 28px;
-                      background:#0D8EC5;
-                      color:#ffffff;
-                      text-decoration:none;
-                      font-family:Arial,Helvetica,sans-serif;
-                      font-size:16px;
-                      font-weight:bold;
-                      border-radius:6px;">
-              Change Password
-            </a>
-          </td>
-        </tr>
- 
- 
-       
-      </table>`,
+          html: `<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+</head>
+<body style="margin:0;padding:0;background-color:#f9f9f9;font-family:'Open Sans', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;background-color:#f9f9f9;">
+    <tr>
+      <td align="center">
+        <!-- Email Container -->
+        <table width="500" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:500px;width:100%;background:#ffffff;border-radius:4px;
+                      box-shadow:0px 0 2px 0 rgba(0,0,0,0.25);">
+          <!-- Logo Header -->
+          <tr>
+            <td align="center" style="background-color:#202020;padding:24px 20px;">
+              <img src="https://karakover.com/frontendassets/img/logo.png"
+                   style="width:220px;max-height:150px;object-fit:contain;" />
+            </td>
+          </tr>
+
+          <!-- Title -->
+          <tr>
+            <td align="center" style="padding:30px 30px 10px;">
+              <h2 style="margin:0;font-weight:600;color:#2F2D3B;
+                         font-family:'Open Sans', Arial, sans-serif;">
+                Reset Password
+              </h2>
+            </td>
+          </tr>
+
+          <!-- Subtext -->
+          <tr>
+            <td align="center" style="padding:0 40px 30px;">
+              <p style="margin:0;font-family:'Open Sans', Arial, sans-serif;
+                        font-size:15px;color:#555;line-height:1.6;">
+                Please click the button below to change your password.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Button -->
+          <tr>
+            <td align="center" style="padding:0 20px 40px;">
+              <a href="${apiUrl}/verifyPassword/${token}"
+                 style="display:inline-block;
+                        padding:12px 24px;
+                        background-color:#202020;
+                        border:1px solid #202020;
+                        color:#ffffff;
+                        text-decoration:none;
+                        font-family:'Open Sans', Arial, sans-serif;
+                        font-size:16px;
+                        font-weight:700;
+                        border-radius:4px;">
+                Change Password
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <table width="500" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;width:100%;">
+          <tr>
+            <td align="center" style="background-color:#202020;padding:15px;">
+              <p style="margin:0;color:#fff;font-family:'Open Sans', Arial, sans-serif;font-size:13px;">
+                © Copyright <strong>Karakover</strong>. All Rights Reserved
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
         };
         transporter.sendMail(mailOptions, async function (error, info) {
           console.log("error", error);
@@ -809,7 +891,6 @@ exports.userProfile = async (req, res) => {
           profileImage = getUploadUrl(results[0]["image"]);
           // "https://api.karakover.com/uploads/" + result[0]["image"];
         }
-
         let userdetail = {
           id: results[0]["id"],
           firstname: results[0]["firstname"],
@@ -819,7 +900,6 @@ exports.userProfile = async (req, res) => {
           image: profileImage,
           instrument_selected: instrument?.[0]?.instrument_selected || "",
         };
-
         return res.json({
           message: "fetch user details success",
           status: 200,
@@ -856,7 +936,6 @@ exports.sociallogin = async (req, res) => {
       })
     );
     const result = schema.validate(req.body);
-
     if (result.error) {
       const message = result.error.details.map((i) => i.message).join(",");
       return res.json({
@@ -869,7 +948,6 @@ exports.sociallogin = async (req, res) => {
     } else {
       const result = await fetchUserbysocial(email, social);
       const usersemail = await fetchUserByEmail(email);
-
       if (result.length != 0) {
         const token = jwt.sign(
           {
@@ -903,10 +981,8 @@ exports.sociallogin = async (req, res) => {
         });
       } else {
         const result2 = await addUser(req.body);
-
         if (result2 && result2.insertId != 0) {
           const result3 = await fetchUserbyId(result2.insertId);
-
           const token = jwt.sign(
             {
               data: {
@@ -915,7 +991,6 @@ exports.sociallogin = async (req, res) => {
             },
             jwtSecret
           );
-
           return res.json({
             success: true,
             message: "Successfully social Login",
@@ -951,7 +1026,6 @@ exports.verifyhomeUser = async (req, res) => {
         id: [Joi.number().empty(), Joi.string().empty()],
       })
     );
-
     const result = schema.validate(req.params);
     if (result.error) {
       const message = result.error.details.map((i) => i.message).join(",");
@@ -974,7 +1048,6 @@ exports.verifyhomeUser = async (req, res) => {
           },
           jwtSecret
         );
-
         const resultUpdate = await updateVerifyUser(data, result[0].id);
         if (resultUpdate.affectedRows) {
           res.sendFile(__dirname + "/view/verify.html");
@@ -1007,7 +1080,6 @@ exports.getSongsOfArtist = async (req, res) => {
       })
     );
     const result = schema.validate(req.body);
-
     if (result.error) {
       const message = result.error.details.map((i) => i.message).join(",");
       return res.json({
@@ -1047,15 +1119,12 @@ exports.getSongsOfArtist = async (req, res) => {
 exports.verifyPassword = async (req, res) => {
   try {
     const token = req.params.token;
-
     if (!token) {
       return res.status(400).send("Invalid link");
     } else {
       const result = await fetchUserToken(token);
-
       if (result.length != 0) {
         localStorage.setItem("vertoken", token);
-
         res.sendFile(path.join(__dirname + "/view/forgetPassword.html"), {
           msg: "",
         });
@@ -1108,12 +1177,10 @@ exports.updatePassword = async (req, res) => {
           </div> `);
     } else {
       //  const token = localStorage.getItem('vertoken');
-
       const result = await fetchUserToken(token);
       if (result.length != 0) {
         const hash = await bcrypt.hash(password, saltRounds);
         const result2 = await updPasswdByToken(hash, token);
-
         if (result2) {
           await tokenUpdate(result[0].id);
           res.sendFile(path.join(__dirname + "/view/message.html"), {
@@ -1150,7 +1217,6 @@ exports.getSongsOfArtistByGenre = async (req, res) => {
       })
     );
     const result = schema.validate(req.body);
-
     if (result.error) {
       const message = result.error.details.map((i) => i.message).join(",");
       return res.json({
@@ -1202,7 +1268,6 @@ exports.song_request = async (req, res) => {
       })
     );
     const result = schema.validate(req.body);
-
     if (result.error) {
       const message = result.error.details.map((i) => i.message).join(",");
       return res.json({
@@ -1217,13 +1282,12 @@ exports.song_request = async (req, res) => {
         user_id: user_id,
         message: message,
       };
-
       const result = await insertSongRequest(data);
       if (result) {
         return res.status(200).json({
           success: true,
           status: 200,
-          message: "Your song request sent successfully!",
+          message: "Your suggestion has been submitted successfully!",
           data: result,
         });
       }
@@ -1245,7 +1309,6 @@ exports.insertNotification = async (req, res) => {
       receiver_id: receiver_id,
       message: message,
     };
-
     const result = await insertIntoNotification(data);
     if (result) {
       return res.status(200).json({

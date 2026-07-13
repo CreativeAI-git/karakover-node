@@ -818,7 +818,7 @@ exports.getSongsById = async (req, res) => {
 
       if (results.length !== 0) {
         let base_url = S3_URL;
-        const base_cover_url = 'https://karakover.com/assets/cover/';
+        const base_cover_url = process.env.BASE_COVER_URL || "https://karakover.com/assets/cover/";
 
         await Promise.all(
           results.map(async (item) => {

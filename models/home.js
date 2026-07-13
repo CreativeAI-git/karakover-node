@@ -790,12 +790,43 @@ module.exports = {
 
 
 
+  // user_subscription_data: async (user_id) => {
+  //   return await db.query(
+  //     `SELECT * FROM user_subscription where user_id = ? ORDER BY id DESC LIMIT 1`,
+  //     [user_id]
+  //   );
+  // },
+
   user_subscription_data: async (user_id) => {
-    return await db.query(
-      `SELECT * FROM user_subscription where user_id = ? ORDER BY id DESC LIMIT 1`,
-      [user_id]
-    );
-  },
+  return await db.query(
+    `SELECT 
+        us.*,
+        tp.plan_name,
+        tp.plan_type,
+        tp.instrument_access,
+        us.instrument_selected,
+        ti.instrument AS instrument_name,
+        ti.image AS instrument_image
+     FROM user_subscription us
+     LEFT JOIN tbl_plans tp
+       ON us.plan_id = tp.id
+     LEFT JOIN tbl_instruments ti
+       ON us.instrument_selected = ti.id
+     WHERE us.user_id = ?
+       AND us.payment_status = 1
+       AND (
+         us.subscription_status IS NULL
+         OR us.subscription_status IN ('active', 'trial', 'past_due')
+       )
+       AND (
+         us.subscription_end_date IS NULL
+         OR us.subscription_end_date >= NOW()
+       )
+     ORDER BY us.subscription_start_date DESC, us.updated_at DESC, us.id DESC
+     LIMIT 1`,
+    [user_id]
+  );
+},
 
   add_favorite_data: async (user_id, song_id) => {
     return await db.query(

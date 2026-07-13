@@ -80,12 +80,30 @@ module.exports = {
 
   getLatestSubscription: async (userId) => {
     return db.query(
-      `SELECT *
-       FROM user_subscription
-       WHERE user_id = ?
-         AND payment_status = ?
-         AND subscription_status IN (?, ?, ?)
-       ORDER BY id DESC
+      `SELECT
+         us.*,
+         tp.plan_name,
+         tp.plan_type,
+         tp.instrument_access,
+         tp.billing_cycle,
+         ti.instrument AS instrument_name,
+         ti.image AS instrument_image
+       FROM user_subscription us
+       LEFT JOIN tbl_plans tp
+         ON us.plan_id = tp.id
+       LEFT JOIN tbl_instruments ti
+         ON us.instrument_selected = ti.id
+       WHERE us.user_id = ?
+         AND us.payment_status = ?
+         AND (
+           us.subscription_status IS NULL
+           OR us.subscription_status IN (?, ?, ?)
+         )
+         AND (
+           us.subscription_end_date IS NULL
+           OR us.subscription_end_date >= NOW()
+         )
+       ORDER BY us.subscription_start_date DESC, us.updated_at DESC, us.id DESC
        LIMIT 1`,
       [userId, 1, "active", "trial", "past_due"]
     );
@@ -93,18 +111,34 @@ module.exports = {
 
   getLatestCancelableSubscription: async (userId) => {
     return db.query(
-      `SELECT *
-       FROM user_subscription
-       WHERE user_id = ?
-         AND stripe_subscription_id IS NOT NULL
-         AND stripe_subscription_id <> ''
+      `SELECT
+         us.*,
+         tp.plan_name,
+         tp.plan_type,
+         tp.instrument_access,
+         tp.billing_cycle,
+         ti.instrument AS instrument_name,
+         ti.image AS instrument_image
+       FROM user_subscription us
+       LEFT JOIN tbl_plans tp
+         ON us.plan_id = tp.id
+       LEFT JOIN tbl_instruments ti
+         ON us.instrument_selected = ti.id
+       WHERE us.user_id = ?
+         AND us.payment_status = ?
+         AND us.stripe_subscription_id IS NOT NULL
+         AND us.stripe_subscription_id <> ''
          AND (
-           subscription_status IS NULL
-           OR subscription_status NOT IN (?, ?, ?)
+           us.subscription_status IS NULL
+           OR us.subscription_status IN (?, ?, ?)
          )
-       ORDER BY id DESC
+         AND (
+           us.subscription_end_date IS NULL
+           OR us.subscription_end_date >= NOW()
+         )
+       ORDER BY us.subscription_start_date DESC, us.updated_at DESC, us.id DESC
        LIMIT 1`,
-      [userId, "cancelled", "canceled", "expired"]
+      [userId, 1, "active", "trial", "past_due"]
     );
   },
 
@@ -112,7 +146,8 @@ module.exports = {
     return db.query(
       `UPDATE user_subscription
        SET subscription_status = ?,
-           payment_status = ?
+           payment_status = ?,
+           subscription_end_date = NOW()
        WHERE id = ?`,
       ["cancelled", 0, subscriptionId]
     );

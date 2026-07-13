@@ -59,6 +59,7 @@ const base_url = BaseURl + "/assets/";
 const baseurl_songs = base_url + "songs/";
 const baseurl_cover = base_url + "cover/";
 const baseurl_banners = BaseURl + "/assets/mobile_banners/";
+const baseurl_instrument = base_url + "instrument/";
 
 const getUploadedSongUrl = (filename) => {
   if (!filename) return "";
@@ -72,6 +73,12 @@ const getUploadedSongUrl = (filename) => {
 
   const cleanPath = value.replace(/^\/+/, "");
   return `${apiUrl}/${cleanPath.startsWith("uploads/") ? cleanPath : `uploads/assets/songs/${cleanPath}`}`;
+};
+
+const getInstrumentImageUrl = (filename) => {
+  if (!filename) return "";
+  const value = String(filename);
+  return /^https?:\/\//i.test(value) ? value : baseurl_instrument + value;
 };
 
 const formatResponse = (list = []) => {
@@ -833,6 +840,7 @@ exports.homePagePaylistsearch = async (req, res) => {
 //   }
 // };
 
+
 exports.homePagePaylist = async (req, res) => {
   try {
     const { user_id } = req.body;
@@ -854,7 +862,14 @@ exports.homePagePaylist = async (req, res) => {
 
     // ===== USER SUBSCRIPTION =====
     let [user_subscription] = await user_subscription_data(user_id);
-    const instrumentSelected = user_subscription?.instrument_selected;
+    const instrumentSelected = user_subscription?.instrument_selected || 5;
+    const selectedInstrument = user_subscription
+      ? {
+          id: user_subscription.instrument_selected,
+          name: user_subscription.instrument_name || null,
+          image: getInstrumentImageUrl(user_subscription.instrument_image),
+        }
+      : null;
 
     const subscriptionName = (
       user_subscription?.subscription_name || ""
@@ -865,6 +880,7 @@ exports.homePagePaylist = async (req, res) => {
     // Trial user => trial plan OR amount = 0
     // Paid user => monthly/yearly or amount > 0
     const isTrialSubscription =
+      !user_subscription ||
       subscriptionName === "trial" ||
       (Number.isFinite(subscriptionAmount) &&
         subscriptionAmount === 0);
@@ -898,9 +914,6 @@ exports.homePagePaylist = async (req, res) => {
       return true;
     });
 
-    // ===== USER INSTRUMENT DETAILS =====
-    let fetchInstId = await getinstrumentByUserid(user_id);
-
     // ===== PROCESS SONGS =====
     const processSong = async item => {
       const [favorite_data] = await get_favorite_data(
@@ -915,6 +928,10 @@ exports.homePagePaylist = async (req, res) => {
           await get_instrument_data_by_instrument_id(
             item.instrument_id
           );
+
+        if (instrument_data?.image) {
+          instrument_data.image = getInstrumentImageUrl(instrument_data.image);
+        }
 
         item.instrument_data = instrument_data || null;
       }
@@ -941,29 +958,29 @@ exports.homePagePaylist = async (req, res) => {
 
       item.drums =
         item.drums &&
-          (fetchInstId[0]?.instrument_selected == 5 ||
-            fetchInstId[0]?.instrument_selected == 3)
+          (instrumentSelected == 5 ||
+            instrumentSelected == 3)
           ? baseurl_songs + item.drums
           : "";
 
       item.guitar =
         item.guitar &&
-          (fetchInstId[0]?.instrument_selected == 5 ||
-            fetchInstId[0]?.instrument_selected == 1)
+          (instrumentSelected == 5 ||
+            instrumentSelected == 1)
           ? baseurl_songs + item.guitar
           : "";
 
       item.bass =
         item.bass &&
-          (fetchInstId[0]?.instrument_selected == 5 ||
-            fetchInstId[0]?.instrument_selected == 2)
+          (instrumentSelected == 5 ||
+            instrumentSelected == 2)
           ? baseurl_songs + item.bass
           : "";
 
       item.keyboards =
         item.keyboards &&
-          (fetchInstId[0]?.instrument_selected == 5 ||
-            fetchInstId[0]?.instrument_selected == 4)
+          (instrumentSelected == 5 ||
+            instrumentSelected == 4)
           ? baseurl_songs + item.keyboards
           : "";
 
@@ -997,9 +1014,23 @@ exports.homePagePaylist = async (req, res) => {
       message: "Home data fetched successfully",
       status: 200,
       success: true,
+      subscription: user_subscription
+        ? {
+            plan_id: user_subscription.plan_id,
+            plan_name: user_subscription.plan_name,
+            plan_type: user_subscription.plan_type,
+            instrument_access: user_subscription.instrument_access,
+            instrument_id: user_subscription.instrument_selected,
+            instrument_selected: user_subscription.instrument_selected,
+            instrument_name: user_subscription.instrument_name,
+            instrument_image: getInstrumentImageUrl(user_subscription.instrument_image),
+            instrument: selectedInstrument,
+            subscription_name: user_subscription.subscription_name,
+            amount: user_subscription.amount,
+          }
+        : null,
       data: homeData,
     });
-
   } catch (error) {
     console.error(error);
     return res.json({
