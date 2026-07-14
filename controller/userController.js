@@ -776,7 +776,7 @@ exports.forgetPassword = async (req, res) => {
                     <!-- Button -->
                     <tr>
                       <td align="center" style="padding:0 20px 40px;">
-                        <a href="${apiUrl}/verifyPassword/${token}"
+                        <a href="${appUrl}/verifyPassword/${token}"
                           style="display:inline-block;
                                   padding:12px 24px;
                                   background-color:#202020;
