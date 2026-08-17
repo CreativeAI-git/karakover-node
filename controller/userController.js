@@ -630,56 +630,6 @@ exports.forgetPassword = async (req, res) => {
         await updateUser(genToken, email);
         const result = await fetchUserByEmail(email);
         let token = result[0].token;
-        //       let mailOptions = {
-        //         from: mailFrom,
-        //         to: email,
-        //         subject: "Forgot Password",
-        //         html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;">
-        // <tr>
-        //   <td align="center">
-        //     <!-- Email Container -->
-        //     <table width="100%" cellpadding="0" cellspacing="0" border="0"
-        //            style="max-width:600px;background:#333;border-radius:8px;
-        //                   box-shadow:0 8px 24px rgba(0,0,0,0.08);">
-        //       <!-- Header -->
-        //       <tr>
-        //         <td align="center" style="padding:50px 20px 10px;">
-        //           <img src="${apiUrl}/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
-        //           <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
-        //                      font-size:20px;color:#fff;">
-        //             Reset Your Password
-        //           </h1>
-        //         </td>
-        //       </tr>
-        //       <!-- Subtext -->
-        //       <tr>
-        //         <td align="center" style="padding:0 30px 20px;">
-        //           <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
-        //                     font-size:15px;color:#fff;line-height:1.6;">
-        //            Please click below link to change password
-        //           </p>
-        //         </td>
-        //       </tr>
-        //       <!-- Button -->
-        //       <tr>
-        //         <td align="center" style="padding:20px 20px 50px;">
-        //           <a href="${apiUrl}/verifyPassword/${token}"
-        //              style="display:inline-block;
-        //                     padding:14px 28px;
-        //                     background:#0D8EC5;
-        //                     color:#ffffff;
-        //                     text-decoration:none;
-        //                     font-family:Arial,Helvetica,sans-serif;
-        //                     font-size:16px;
-        //                     font-weight:bold;
-        //                     border-radius:6px;">
-        //             Change Password
-        //           </a>
-        //         </td>
-        //       </tr>
-        //     </table>`,
-        //       };
-
         let mailOptions = {
           from: mailFrom,
           to: email,
