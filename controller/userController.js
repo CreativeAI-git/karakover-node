@@ -181,23 +181,70 @@ exports.signup = async (req, res) => {
               created_at: CurrentDate,
             };
             const result = await addUser(user);
+
+            const activationUrl =
+    `${appUrl}/verifyhomeUser/${actToken}/${result.insertId}`;
+
+console.log("ACTIVATION URL:", activationUrl);
+
             if (result.affectedRows > 0) {
               let mailOptions = {
                 from: mailFrom,
                 to: email,
                 subject: "Activate Account",
-                html: `<table width="100%" border=false cellspacing=false cellpadding=false>
-                                <tr>
-                                   <td class="bodycopy" style="text-align:left;">
-                                      <center>
-                                         <div align="center"></div>
-                                         <p></p>
-                                         <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
-                                         <p style="color:#333"> Please <a href="${apiUrl}/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
-                                      </center>
-                                   </td>
-                                </tr>
-                             </table>`,
+                // html: `<table width="100%" border=false cellspacing=false cellpadding=false>
+                //                 <tr>
+                //                    <td class="bodycopy" style="text-align:left;">
+                //                       <center>
+                //                          <div align="center"></div>
+                //                          <p></p>
+                //                          <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
+                //                          <p style="color:#333"> Please <a href="${appUrl}/verifyhomeUser/${actToken}/${result.insertId}" style="color:#DF1C62">click here</a>  to activate your account.</p>
+                //                       </center>
+                //                    </td>
+                //                 </tr>
+                //              </table>`,
+                html: `
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f5f7fb;">
+                      <tr>
+                          <td align="center" style="padding:40px 20px;">
+
+                              <table width="600" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:#ffffff;">
+                                  <tr>
+                                      <td align="center" style="padding:40px 25px;font-family:Arial,Helvetica,sans-serif;">
+
+                                          <h2 style="margin:0 0 15px 0;color:#222222;font-size:26px;line-height:36px;">
+                                              Your account has been created successfully
+                                          </h2>
+
+                                          <p style="margin:0 0 30px 0;color:#666666;font-size:16px;line-height:26px;">
+                                              Your account is ready to use. Please activate your account by clicking the button below.
+                                          </p>
+
+                                          <!-- BUTTON -->
+                                          <a
+                                              href="https://api.karakover.com/verifyhomeUser/${actToken}/${result.insertId}"
+                                              style="
+                                                  background:#DF1C62;
+                                                  color:#ffffff;
+                                                  font-family:Arial,Helvetica,sans-serif;
+                                                  font-size:16px;
+                                                  font-weight:bold;
+                                                  line-height:20px;
+                                                  text-decoration:none;
+                                                  padding:15px 30px;
+                                                  display:inline-block;
+                                              "
+                                          >Activate My Account</a>
+
+                                      </td>
+                                  </tr>
+                              </table>
+
+                          </td>
+                      </tr>
+                  </table>
+                  `,
               };
               console.log("Signup SMTP user:", smtpUser);
               transporter.sendMail(mailOptions, async function (error, info) {
@@ -602,6 +649,130 @@ exports.editProfile = async (req, res) => {
   }
 };
 
+// exports.forgetPassword = async (req, res) => {
+//   const { email } = req.body;
+//   try {
+//     const schema = Joi.alternatives(
+//       Joi.object({
+//         email: Joi.string().empty().required().messages({
+//           "string.empty": "email can't be empty",
+//           "string.required": "email is required",
+//         }),
+//       })
+//     );
+//     const result = schema.validate(req.body);
+
+//     if (result.error) {
+//       const message = result.error.details.map((i) => i.message).join(",");
+//       return res.json({
+//         message: result.error.details[0].message,
+//         error: message,
+//         missingParams: result.error.details[0].message,
+//         status: 400,
+//         success: false,
+//       });
+//     } else {
+//       const result = await fetchUserByEmail(email);
+
+//       if (result.length != 0) {
+//         const genToken = randomStringAsBase64Url(20);
+//         await updateUser(genToken, email);
+
+//         const result = await fetchUserByEmail(email);
+
+//         let token = result[0].token;
+//         let mailOptions = {
+//           from: mailFrom,
+//           to: email,
+//           subject: "Forgot Password",
+//           html: `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;">
+//   <tr>
+//     <td align="center">
+
+//       <!-- Email Container -->
+//       <table width="100%" cellpadding="0" cellspacing="0" border="0"
+//              style="max-width:600px;background:#333;border-radius:8px;
+//                     box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+
+//         <!-- Header -->
+//         <tr>
+//           <td align="center" style="padding:50px 20px 10px;">
+
+//             <img src="${appUrl}/image/logo.png" style="max-width:200px; object-fit: contain; margin-bottom: 30px;" />
+//             <h1 style="margin:0;font-family:Arial,Helvetica,sans-serif;
+//                        font-size:20px;color:#fff;">
+//               Reset Your Password
+//             </h1>
+//           </td>
+//         </tr>
+
+//         <!-- Subtext -->
+//         <tr>
+//           <td align="center" style="padding:0 30px 20px;">
+//             <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+//                       font-size:15px;color:#fff;line-height:1.6;">
+//              Please click below link to change password
+//             </p>
+//           </td>
+//         </tr>
+
+//         <!-- Button -->
+//         <tr>
+//           <td align="center" style="padding:20px 20px 50px;">
+//             <a href="${appUrl}/verifyPassword/${token}"
+//                style="display:inline-block;
+//                       padding:14px 28px;
+//                       background:#0D8EC5;
+//                       color:#ffffff;
+//                       text-decoration:none;
+//                       font-family:Arial,Helvetica,sans-serif;
+//                       font-size:16px;
+//                       font-weight:bold;
+//                       border-radius:6px;">
+//               Change Password
+//             </a>
+//           </td>
+//         </tr>
+
+
+
+//       </table>`,
+//         };
+//         transporter.sendMail(mailOptions, async function (error, info) {
+//           console.log("error", error);
+//           if (error) {
+//             return res.json({
+//               success: false,
+//               message: "Mail Not delivered",
+//             });
+//           } else {
+//             return res.json({
+//               success: true,
+//               message:
+//                 "An email has been sent to you with detailed instructions on how to change password.",
+//               userinfo: result.rows,
+//               status: 200,
+//             });
+//           }
+//         });
+//       } else {
+//         return res.json({
+//           success: false,
+//           message: "User is not registered with karakover",
+//         });
+//       }
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     return res.json({
+//       success: false,
+//       message: "Internal server error",
+//       status: 500,
+//     });
+//   }
+// };
+
+
 exports.forgetPassword = async (req, res) => {
   const { email } = req.body;
   try {
@@ -635,81 +806,81 @@ exports.forgetPassword = async (req, res) => {
           to: email,
           subject: "Forgot Password",
           html: `<!doctype html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-</head>
-<body style="margin:0;padding:0;background-color:#f9f9f9;font-family:'Open Sans', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;background-color:#f9f9f9;">
-    <tr>
-      <td align="center">
-        <!-- Email Container -->
-        <table width="500" cellpadding="0" cellspacing="0" border="0"
-               style="max-width:500px;width:100%;background:#ffffff;border-radius:4px;
-                      box-shadow:0px 0 2px 0 rgba(0,0,0,0.25);">
-          <!-- Logo Header -->
-          <tr>
-            <td align="center" style="background-color:#202020;padding:24px 20px;">
-              <img src="https://karakover.com/frontendassets/img/logo.png"
-                   style="width:220px;max-height:150px;object-fit:contain;" />
-            </td>
-          </tr>
-
-          <!-- Title -->
-          <tr>
-            <td align="center" style="padding:30px 30px 10px;">
-              <h2 style="margin:0;font-weight:600;color:#2F2D3B;
-                         font-family:'Open Sans', Arial, sans-serif;">
-                Reset Password
-              </h2>
-            </td>
-          </tr>
-
-          <!-- Subtext -->
-          <tr>
-            <td align="center" style="padding:0 40px 30px;">
-              <p style="margin:0;font-family:'Open Sans', Arial, sans-serif;
-                        font-size:15px;color:#555;line-height:1.6;">
-                Please click the button below to change your password.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Button -->
-          <tr>
-            <td align="center" style="padding:0 20px 40px;">
-              <a href="${apiUrl}/verifyPassword/${token}"
-                 style="display:inline-block;
-                        padding:12px 24px;
-                        background-color:#202020;
-                        border:1px solid #202020;
-                        color:#ffffff;
-                        text-decoration:none;
-                        font-family:'Open Sans', Arial, sans-serif;
-                        font-size:16px;
-                        font-weight:700;
-                        border-radius:4px;">
-                Change Password
-              </a>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Footer -->
-        <table width="500" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;width:100%;">
-          <tr>
-            <td align="center" style="background-color:#202020;padding:15px;">
-              <p style="margin:0;color:#fff;font-family:'Open Sans', Arial, sans-serif;font-size:13px;">
-                © Copyright <strong>Karakover</strong>. All Rights Reserved
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`,
+          <html>
+          <head>
+            <meta charset="UTF-8" />
+          </head>
+          <body style="margin:0;padding:0;background-color:#f9f9f9;font-family:'Open Sans', Arial, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:40px 0;background-color:#f9f9f9;">
+              <tr>
+                <td align="center">
+                  <!-- Email Container -->
+                  <table width="500" cellpadding="0" cellspacing="0" border="0"
+                        style="max-width:500px;width:100%;background:#ffffff;border-radius:4px;
+                                box-shadow:0px 0 2px 0 rgba(0,0,0,0.25);">
+                    <!-- Logo Header -->
+                    <tr>
+                      <td align="center" style="background-color:#202020;padding:24px 20px;">
+                        <img src="https://karakover.com/frontendassets/img/logo.png"
+                            style="width:220px;max-height:150px;object-fit:contain;" />
+                      </td>
+                    </tr>
+          
+                    <!-- Title -->
+                    <tr>
+                      <td align="center" style="padding:30px 30px 10px;">
+                        <h2 style="margin:0;font-weight:600;color:#2F2D3B;
+                                  font-family:'Open Sans', Arial, sans-serif;">
+                          Reset Password
+                        </h2>
+                      </td>
+                    </tr>
+          
+                    <!-- Subtext -->
+                    <tr>
+                      <td align="center" style="padding:0 40px 30px;">
+                        <p style="margin:0;font-family:'Open Sans', Arial, sans-serif;
+                                  font-size:15px;color:#555;line-height:1.6;">
+                          Please click the button below to change your password.
+                        </p>
+                      </td>
+                    </tr>
+          
+                    <!-- Button -->
+                    <tr>
+                      <td align="center" style="padding:0 20px 40px;">
+                        <a href="${appUrl}/verifyPassword/${token}"
+                          style="display:inline-block;
+                                  padding:12px 24px;
+                                  background-color:#202020;
+                                  border:1px solid #202020;
+                                  color:#ffffff;
+                                  text-decoration:none;
+                                  font-family:'Open Sans', Arial, sans-serif;
+                                  font-size:16px;
+                                  font-weight:700;
+                                  border-radius:4px;">
+                          Change Password
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+          
+                  <!-- Footer -->
+                  <table width="500" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;width:100%;">
+                    <tr>
+                      <td align="center" style="background-color:#202020;padding:15px;">
+                        <p style="margin:0;color:#fff;font-family:'Open Sans', Arial, sans-serif;font-size:13px;">
+                          © Copyright <strong>Karakover</strong>. All Rights Reserved
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>`,
         };
         transporter.sendMail(mailOptions, async function (error, info) {
           console.log("error", error);
