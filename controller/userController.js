@@ -158,23 +158,69 @@ exports.signup = async (req, res) => {
             };
             const result = await addUser(user);
 
+            const activationUrl =
+    `${appUrl}/verifyhomeUser/${actToken}/${result.insertId}`;
+
+console.log("ACTIVATION URL:", activationUrl);
+
             if (result.affectedRows > 0) {
               let mailOptions = {
                 from: mailFrom,
                 to: email,
                 subject: "Activate Account",
-                html: `<table width="100%" border=false cellspacing=false cellpadding=false>
-                                <tr>
-                                   <td class="bodycopy" style="text-align:left;">
-                                      <center>
-                                         <div align="center"></div>
-                                         <p></p>
-                                         <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
-                                         <p style="color:#333"> Please <a href="${appUrl}/verifyhomeUser/${actToken}/${result.insertId}">click here</a>  to activate your account.</p>
-                                      </center>
-                                   </td>
-                                </tr>
-                             </table>`,
+                // html: `<table width="100%" border=false cellspacing=false cellpadding=false>
+                //                 <tr>
+                //                    <td class="bodycopy" style="text-align:left;">
+                //                       <center>
+                //                          <div align="center"></div>
+                //                          <p></p>
+                //                          <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
+                //                          <p style="color:#333"> Please <a href="${appUrl}/verifyhomeUser/${actToken}/${result.insertId}" style="color:#DF1C62">click here</a>  to activate your account.</p>
+                //                       </center>
+                //                    </td>
+                //                 </tr>
+                //              </table>`,
+                html: `
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f5f7fb;">
+                      <tr>
+                          <td align="center" style="padding:40px 20px;">
+
+                              <table width="600" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:#ffffff;">
+                                  <tr>
+                                      <td align="center" style="padding:40px 25px;font-family:Arial,Helvetica,sans-serif;">
+
+                                          <h2 style="margin:0 0 15px 0;color:#222222;font-size:26px;line-height:36px;">
+                                              Your account has been created successfully
+                                          </h2>
+
+                                          <p style="margin:0 0 30px 0;color:#666666;font-size:16px;line-height:26px;">
+                                              Your account is ready to use. Please activate your account by clicking the button below.
+                                          </p>
+
+                                          <!-- BUTTON -->
+                                          <a
+                                              href="https://api.karakover.com/verifyhomeUser/${actToken}/${result.insertId}"
+                                              style="
+                                                  background:#DF1C62;
+                                                  color:#ffffff;
+                                                  font-family:Arial,Helvetica,sans-serif;
+                                                  font-size:16px;
+                                                  font-weight:bold;
+                                                  line-height:20px;
+                                                  text-decoration:none;
+                                                  padding:15px 30px;
+                                                  display:inline-block;
+                                              "
+                                          >Activate My Account</a>
+
+                                      </td>
+                                  </tr>
+                              </table>
+
+                          </td>
+                      </tr>
+                  </table>
+                  `,
               };
 
               console.log("Signup SMTP user:", smtpUser);
