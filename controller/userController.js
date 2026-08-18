@@ -62,28 +62,6 @@ function betweenRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-// gmail credentials for sending mail
-// var transporter = nodemailer.createTransport({
-//   // service: 'gmail',
-//   host: "smtp.gmail.com",
-//   port: 587,
-//   // secure: true,
-//   auth: {
-//     user: "karaokeapp23@gmail.com",
-//     pass: "itkfbulkhkrnbvrc",
-//   },
-// });
-
-// var transporter = nodemailer.createTransport({
-//   host: "smtpout.secureserver.net",
-//   port: 587,
-//   secure: false,
-//   auth: {
-//     user: smtpUser,
-//     pass: smtpPass,
-//   },
-// });
-
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.office365.com",
   port: Number(process.env.SMTP_PORT || 587),
@@ -158,28 +136,14 @@ exports.signup = async (req, res) => {
             };
             const result = await addUser(user);
 
-            const activationUrl =
-    `${appUrl}/verifyhomeUser/${actToken}/${result.insertId}`;
-
-console.log("ACTIVATION URL:", activationUrl);
+            const activationUrl = `${appUrl}/verifyhomeUser/${actToken}/${result.insertId}`;
+            console.log("ACTIVATION URL:", activationUrl);
 
             if (result.affectedRows > 0) {
               let mailOptions = {
                 from: mailFrom,
                 to: email,
                 subject: "Activate Account",
-                // html: `<table width="100%" border=false cellspacing=false cellpadding=false>
-                //                 <tr>
-                //                    <td class="bodycopy" style="text-align:left;">
-                //                       <center>
-                //                          <div align="center"></div>
-                //                          <p></p>
-                //                          <h2 style="text-align: center;margin-top:15px;"><strong>Your account has been created successfully and is ready to use </strong></h2>
-                //                          <p style="color:#333"> Please <a href="${appUrl}/verifyhomeUser/${actToken}/${result.insertId}" style="color:#DF1C62">click here</a>  to activate your account.</p>
-                //                       </center>
-                //                    </td>
-                //                 </tr>
-                //              </table>`,
                 html: `
                   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f5f7fb;">
                       <tr>
@@ -199,7 +163,7 @@ console.log("ACTIVATION URL:", activationUrl);
 
                                           <!-- BUTTON -->
                                           <a
-                                              href="https://api.karakover.com/verifyhomeUser/${actToken}/${result.insertId}"
+                                              href="${activationUrl}"
                                               style="
                                                   background:#DF1C62;
                                                   color:#ffffff;
