@@ -1319,25 +1319,154 @@ exports.getSongsByCategory = async (req, res) => {
   }
 };
 
+// exports.pay_now = async (req, res) => {
+//   try {
+//     var CurrentDate = moment().format();
+//     const { user_id, id, payment_status, amount, subscription_days } = req.body;
+
+//     const schema = Joi.alternatives(
+//       Joi.object({
+//         user_id: [Joi.number().empty(), Joi.string().empty()],
+//         id: [Joi.number().empty(), Joi.string().empty()],
+//         payment_status: [Joi.number().empty(), Joi.string().empty()],
+//         amount: [Joi.number().empty(), Joi.string().empty()],
+//         subscription_name: [Joi.string().lowercase().valid("monthly", "yearly", "trial").empty()],
+//         subscription_days: [Joi.number().empty(), Joi.string().empty()],
+//       })
+//     );
+//     const result = schema.validate(req.body);
+
+//     if (result.error) {
+//       const message = result.error.details.map((i) => i.message).join(",");
+//       return res.json({
+//         message: result.error.details[0].message,
+//         error: message,
+//         missingParams: result.error.details[0].message,
+//         status: 400,
+//         success: false,
+//       });
+//     } else {
+//       const normalizedAmount =
+//         amount === "" || amount === null || amount === undefined
+//           ? 0
+//           : Number(amount);
+//       const isFreeTrial = Number.isFinite(normalizedAmount) && normalizedAmount === 0;
+
+//       // If amount is 0, treat this as a successful free-trial activation.
+//       // Trial duration logic is handled in `getSubscriptionStatus`.
+//       const normalizedPaymentStatus = isFreeTrial ? 1 : payment_status;
+//       const normalizedSubscriptionName = isFreeTrial
+//         ? "trial"
+//         : result.value.subscription_name || "monthly";
+//       const normalizedSubscriptionDays =
+//         subscription_days === "" || subscription_days === null || subscription_days === undefined
+//           ? isFreeTrial
+//             ? 7
+//             : normalizedSubscriptionName === "yearly"
+//               ? 365
+//               : 30
+//           : Number(subscription_days);
+//       const subscriptionDays = Number.isFinite(normalizedSubscriptionDays)
+//         ? normalizedSubscriptionDays
+//         : 30;
+//       const subscriptionStartDate = moment();
+//       const subscriptionEndDate = moment(subscriptionStartDate).add(subscriptionDays, "days");
+//       const selectedSubscription = id
+//         ? await getinstrumentSelected(id)
+//         : await getinstrumentByUserid(user_id);
+//       const instrumentSelected = selectedSubscription[0]?.instrument_selected || 5;
+
+//       let data = {
+//         user_id,
+//         instrument_selected: instrumentSelected,
+//         amount: Number.isFinite(normalizedAmount) ? normalizedAmount : amount,
+//         subscription_name: normalizedSubscriptionName,
+//         subscription_start_date: subscriptionStartDate.format("YYYY-MM-DD HH:mm:ss"),
+//         subscription_end_date: subscriptionEndDate.format("YYYY-MM-DD HH:mm:ss"),
+//         subscription_days: subscriptionDays,
+//         created_at: CurrentDate,
+//         updated_at: CurrentDate,
+//         payment_status: normalizedPaymentStatus,
+//       };
+
+//       let result1 = await insertSubscriptionHistory(data);
+//       console.log('result1', result1);
+
+//       if (result1.affectedRows) {
+//         let data1 = {
+//           payment_status: normalizedPaymentStatus,
+//         };
+
+//         let updateId = await updateUserById(data1, user_id);
+//         console.log('updateId', updateId);
+
+//         return res.json({
+//           message: "Payment Done Successfully",
+//           status: 200,
+//           success: true,
+//           details: data,
+//         });
+//       } else {
+//         return res.json({
+//           message: "Payment failed",
+//           status: 400,
+//           success: false,
+//           details: {},
+//         });
+//       }
+//     }
+//   } catch (err) {
+//     console.log(err);
+
+//     return res.json({
+//       success: false,
+//       message: "Internal server error",
+//       error: err,
+//       status: 500,
+//     });
+//   }
+// };
+
+// updated by @Krishn 18-08-2026
 exports.pay_now = async (req, res) => {
   try {
-    var CurrentDate = moment().format();
-    const { user_id, id, payment_status, amount, subscription_days } = req.body;
+    const CurrentDate = moment().format();
 
+    const {
+      user_id,
+      id,
+      payment_status,
+      amount,
+      subscription_days,
+    } = req.body;
+
+    // ===== VALIDATION =====
     const schema = Joi.alternatives(
       Joi.object({
         user_id: [Joi.number().empty(), Joi.string().empty()],
         id: [Joi.number().empty(), Joi.string().empty()],
         payment_status: [Joi.number().empty(), Joi.string().empty()],
         amount: [Joi.number().empty(), Joi.string().empty()],
-        subscription_name: [Joi.string().lowercase().valid("monthly", "yearly", "trial").empty()],
-        subscription_days: [Joi.number().empty(), Joi.string().empty()],
+        subscription_name: [
+          Joi.string()
+            .lowercase()
+            .valid("monthly", "yearly", "trial")
+            .empty(),
+        ],
+        subscription_days: [
+          Joi.number().empty(),
+          Joi.string().empty(),
+        ],
       })
     );
+
     const result = schema.validate(req.body);
 
     if (result.error) {
-      const message = result.error.details.map((i) => i.message).join(",");
+      const message = result.error.details
+        .map((i) => i.message)
+        .join(",");
+
       return res.json({
         message: result.error.details[0].message,
         error: message,
@@ -1345,77 +1474,483 @@ exports.pay_now = async (req, res) => {
         status: 400,
         success: false,
       });
-    } else {
-      const normalizedAmount =
-        amount === "" || amount === null || amount === undefined
-          ? 0
-          : Number(amount);
-      const isFreeTrial = Number.isFinite(normalizedAmount) && normalizedAmount === 0;
+    }
 
-      // If amount is 0, treat this as a successful free-trial activation.
-      // Trial duration logic is handled in `getSubscriptionStatus`.
-      const normalizedPaymentStatus = isFreeTrial ? 1 : payment_status;
-      const normalizedSubscriptionName = isFreeTrial
-        ? "trial"
-        : result.value.subscription_name || "monthly";
-      const normalizedSubscriptionDays =
-        subscription_days === "" || subscription_days === null || subscription_days === undefined
-          ? isFreeTrial
-            ? 7
-            : normalizedSubscriptionName === "yearly"
-              ? 365
-              : 30
-          : Number(subscription_days);
-      const subscriptionDays = Number.isFinite(normalizedSubscriptionDays)
-        ? normalizedSubscriptionDays
-        : 30;
-      const subscriptionStartDate = moment();
-      const subscriptionEndDate = moment(subscriptionStartDate).add(subscriptionDays, "days");
-      const selectedSubscription = id
-        ? await getinstrumentSelected(id)
-        : await getinstrumentByUserid(user_id);
-      const instrumentSelected = selectedSubscription[0]?.instrument_selected || 5;
+    // ===== NORMALIZE AMOUNT =====
+    const normalizedAmount =
+      amount === "" ||
+        amount === null ||
+        amount === undefined
+        ? 0
+        : Number(amount);
 
-      let data = {
-        user_id,
-        instrument_selected: instrumentSelected,
-        amount: Number.isFinite(normalizedAmount) ? normalizedAmount : amount,
-        subscription_name: normalizedSubscriptionName,
-        subscription_start_date: subscriptionStartDate.format("YYYY-MM-DD HH:mm:ss"),
-        subscription_end_date: subscriptionEndDate.format("YYYY-MM-DD HH:mm:ss"),
-        subscription_days: subscriptionDays,
-        created_at: CurrentDate,
-        updated_at: CurrentDate,
-        payment_status: normalizedPaymentStatus,
-      };
+    const isFreeTrial =
+      Number.isFinite(normalizedAmount) &&
+      normalizedAmount === 0;
 
-      let result1 = await insertSubscriptionHistory(data);
-      console.log('result1', result1);
+    // ===== PAYMENT STATUS =====
+    const normalizedPaymentStatus = isFreeTrial
+      ? 1
+      : payment_status;
 
-      if (result1.affectedRows) {
-        let data1 = {
-          payment_status: normalizedPaymentStatus,
+    // ===== SUBSCRIPTION NAME =====
+    const normalizedSubscriptionName = isFreeTrial
+      ? "trial"
+      : result.value.subscription_name || "monthly";
+
+    // ===== SUBSCRIPTION DAYS =====
+    const normalizedSubscriptionDays =
+      subscription_days === "" ||
+        subscription_days === null ||
+        subscription_days === undefined
+        ? isFreeTrial
+          ? 7
+          : normalizedSubscriptionName === "yearly"
+            ? 365
+            : 30
+        : Number(subscription_days);
+
+    const subscriptionDays = Number.isFinite(
+      normalizedSubscriptionDays
+    )
+      ? normalizedSubscriptionDays
+      : 30;
+
+    // ===== SUBSCRIPTION START / END DATE =====
+    const subscriptionStartDate = moment();
+
+    const subscriptionEndDate = moment(
+      subscriptionStartDate
+    ).add(subscriptionDays, "days");
+
+    // ===== GET SELECTED INSTRUMENT =====
+    const selectedSubscription = id
+      ? await getinstrumentSelected(id)
+      : await getinstrumentByUserid(user_id);
+
+    const instrumentSelected =
+      selectedSubscription[0]?.instrument_selected || 5;
+
+    // ===== SUBSCRIPTION DATA =====
+    const data = {
+      user_id: user_id,
+      instrument_selected: instrumentSelected,
+      amount: Number.isFinite(normalizedAmount)
+        ? normalizedAmount
+        : amount,
+      subscription_name: normalizedSubscriptionName,
+      subscription_start_date:
+        subscriptionStartDate.format(
+          "YYYY-MM-DD HH:mm:ss"
+        ),
+      subscription_end_date:
+        subscriptionEndDate.format(
+          "YYYY-MM-DD HH:mm:ss"
+        ),
+      subscription_days: subscriptionDays,
+      created_at: CurrentDate,
+      updated_at: CurrentDate,
+      payment_status: normalizedPaymentStatus,
+    };
+
+    console.log("Subscription Data:", data);
+
+    // ===== INSERT SUBSCRIPTION HISTORY =====
+    const result1 = await insertSubscriptionHistory(data);
+
+    console.log("result1:", result1);
+
+    if (!result1.affectedRows) {
+      return res.json({
+        message: "Payment failed",
+        status: 400,
+        success: false,
+        details: {},
+      });
+    }
+
+    // ===== UPDATE USER PAYMENT STATUS =====
+    const data1 = {
+      payment_status: normalizedPaymentStatus,
+    };
+
+    const updateId = await updateUserById(
+      data1,
+      user_id
+    );
+
+    console.log("updateId:", updateId);
+
+    // =====================================================
+    // SEND SUBSCRIPTION SUCCESS EMAIL
+    // =====================================================
+
+    try {
+      // Get user details
+      const [userRows] = await getUserById(user_id);
+
+      const user = userRows?.[0];
+
+      if (user?.email) {
+
+        // Subscription display name
+        const subscriptionDisplayName =
+          normalizedSubscriptionName
+            .charAt(0)
+            .toUpperCase() +
+          normalizedSubscriptionName.slice(1);
+
+        // Amount
+        const formattedAmount =
+          Number(data.amount || 0).toFixed(2);
+
+        // Dates
+        const formattedStartDate =
+          subscriptionStartDate.format(
+            "MMMM DD, YYYY"
+          );
+
+        const formattedEndDate =
+          subscriptionEndDate.format(
+            "MMMM DD, YYYY"
+          );
+
+        // User name
+        const userName =
+          [user.firstname, user.lastname]
+            .filter(Boolean)
+            .join(" ") || "User";
+
+        // ===== EMAIL HTML =====
+        const emailHtml = `
+          <table
+            width="100%"
+            border="0"
+            cellspacing="0"
+            cellpadding="0"
+            style="background-color:#f5f7fb;"
+          >
+            <tr>
+              <td
+                align="center"
+                style="padding:40px 20px;"
+              >
+
+                <table
+                  width="600"
+                  border="0"
+                  cellspacing="0"
+                  cellpadding="0"
+                  style="
+                    width:100%;
+                    max-width:600px;
+                    background:#ffffff;
+                    border-radius:12px;
+                    overflow:hidden;
+                  "
+                >
+
+                  <!-- HEADER -->
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        background:#DF1C62;
+                        padding:25px 20px;
+                        font-family:Arial,Helvetica,sans-serif;
+                      "
+                    >
+                      <h1
+                        style="
+                          margin:0;
+                          color:#ffffff;
+                          font-size:24px;
+                          line-height:32px;
+                          font-weight:600;
+                        "
+                      >
+                        Subscription Confirmed
+                      </h1>
+                    </td>
+                  </tr>
+
+                  <!-- CONTENT -->
+                  <tr>
+                    <td
+                      style="
+                        padding:40px 35px;
+                        font-family:Arial,Helvetica,sans-serif;
+                        color:#333333;
+                      "
+                    >
+
+                      <h2
+                        style="
+                          margin:0 0 15px 0;
+                          color:#222222;
+                          font-size:24px;
+                          line-height:32px;
+                          font-weight:600;
+                        "
+                      >
+                        Hello ${userName},
+                      </h2>
+
+                      <p
+                        style="
+                          margin:0 0 25px 0;
+                          color:#555555;
+                          font-size:16px;
+                          line-height:26px;
+                        "
+                      >
+                        Your subscription has been successfully
+                        activated. Please find your subscription
+                        details below.
+                      </p>
+
+                      <!-- SUBSCRIPTION DETAILS -->
+                      <table
+                        width="100%"
+                        border="0"
+                        cellspacing="0"
+                        cellpadding="0"
+                        style="
+                          border:1px solid #eeeeee;
+                          border-collapse:collapse;
+                        "
+                      >
+
+                        <tr>
+                          <td
+                            width="45%"
+                            style="
+                              padding:13px 15px;
+                              background:#fafafa;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              font-weight:bold;
+                              color:#333333;
+                            "
+                          >
+                            Subscription
+                          </td>
+
+                          <td
+                            style="
+                              padding:13px 15px;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              color:#555555;
+                            "
+                          >
+                            ${subscriptionDisplayName}
+                          </td>
+                        </tr>
+
+                        <tr>
+                          <td
+                            style="
+                              padding:13px 15px;
+                              background:#fafafa;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              font-weight:bold;
+                              color:#333333;
+                            "
+                          >
+                            Amount
+                          </td>
+
+                          <td
+                            style="
+                              padding:13px 15px;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              color:#555555;
+                            "
+                          >
+                            ${isFreeTrial
+            ? "Free"
+            : "$" + formattedAmount
+          }
+                          </td>
+                        </tr>
+
+                        <tr>
+                          <td
+                            style="
+                              padding:13px 15px;
+                              background:#fafafa;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              font-weight:bold;
+                              color:#333333;
+                            "
+                          >
+                            Start Date
+                          </td>
+
+                          <td
+                            style="
+                              padding:13px 15px;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              color:#555555;
+                            "
+                          >
+                            ${formattedStartDate}
+                          </td>
+                        </tr>
+
+                        <tr>
+                          <td
+                            style="
+                              padding:13px 15px;
+                              background:#fafafa;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              font-weight:bold;
+                              color:#333333;
+                            "
+                          >
+                            End Date
+                          </td>
+
+                          <td
+                            style="
+                              padding:13px 15px;
+                              border-bottom:1px solid #eeeeee;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              color:#555555;
+                            "
+                          >
+                            ${formattedEndDate}
+                          </td>
+                        </tr>
+
+                        <tr>
+                          <td
+                            style="
+                              padding:13px 15px;
+                              background:#fafafa;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              font-weight:bold;
+                              color:#333333;
+                            "
+                          >
+                            Duration
+                          </td>
+
+                          <td
+                            style="
+                              padding:13px 15px;
+                              font-family:Arial,Helvetica,sans-serif;
+                              font-size:14px;
+                              color:#555555;
+                            "
+                          >
+                            ${subscriptionDays} days
+                          </td>
+                        </tr>
+
+                      </table>
+
+                      <p
+                        style="
+                          margin:25px 0 0 0;
+                          color:#555555;
+                          font-size:15px;
+                          line-height:25px;
+                        "
+                      >
+                        Thank you for choosing our service.
+                        We hope you enjoy your subscription.
+                      </p>
+
+                    </td>
+                  </tr>
+
+                  <!-- FOOTER -->
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        background:#fafafa;
+                        border-top:1px solid #eeeeee;
+                        padding:20px;
+                        font-family:Arial,Helvetica,sans-serif;
+                      "
+                    >
+                      <p
+                        style="
+                          margin:0;
+                          color:#999999;
+                          font-size:12px;
+                          line-height:18px;
+                        "
+                      >
+                        This is an automated email.
+                        Please do not reply to this message.
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+
+              </td>
+            </tr>
+          </table>
+        `;
+
+        // ===== EMAIL OPTIONS =====
+        const emailOptions = {
+          to: user.email,
+          subject: `Your ${subscriptionDisplayName} Subscription is Active`,
+          html: emailHtml,
         };
 
-        let updateId = await updateUserById(data1, user_id);
-        console.log('updateId', updateId);
+        // ===== SEND EMAIL =====
+        await sendEmail(emailOptions);
 
-        return res.json({
-          message: "Payment Done Successfully",
-          status: 200,
-          success: true,
-          details: data,
-        });
+        console.log(
+          "Subscription confirmation email sent successfully:",
+          user.email
+        );
       } else {
-        return res.json({
-          message: "Payment failed",
-          status: 400,
-          success: false,
-          details: {},
-        });
+        console.log(
+          "User email not found. Subscription email was not sent."
+        );
       }
+
+    } catch (emailError) {
+
+      // Do not fail successful payment because email failed
+      console.error(
+        "Subscription confirmation email error:",
+        emailError
+      );
     }
+
+    // ===== SUCCESS RESPONSE =====
+    return res.json({
+      message: "Payment Done Successfully",
+      status: 200,
+      success: true,
+      details: data,
+    });
+
   } catch (err) {
+
     console.log(err);
 
     return res.json({
